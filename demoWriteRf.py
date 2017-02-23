@@ -3,7 +3,7 @@
 Create a 2D selective RF pulse for a spin echo sequence
 
 This demo defines an entire MRI sequence in Python to selectively excite
-a volume. A slice through this excited volume is then imaged with a 
+a volume. A slice through this excited volume is then imaged with a
 slice-selective refocusing pulse.
 
 This example performs the following steps:
@@ -15,6 +15,7 @@ This example performs the following steps:
 
 @author: Stefan Kroboth
 """
+# pylint: disable=invalid-name
 
 from Sequence import Sequence
 import numpy as np
@@ -26,24 +27,24 @@ import mr
 seq = Sequence()
 
 # Sequence parameters are defined using standard Python variables
-fov = 220*1e-3          # Field of view
+fov = 220*1e-3           # Field of view
 Nx = 256                 # Imaging resolution x
 Ny = 256                 # Imaging resolution y
-foe = 200*1e-3          # Field of excitation
-targetWidth = 22.5*1e-3 # Diameter of target excitation pattern
+foe = 200*1e-3           # Field of excitation
+target_width = 22.5*1e-3  # Diameter of target excitation pattern
 n = 8                    # Number of spiral turns
-T = 8*1e-3              # Pulse duration
+T = 8*1e-3               # Pulse duration
 
-## Excitation k-space
+##
+# Excitation k-space
 # A inward spiral trajectory for the excitation k-space is defined. The
 # field-of-excitation and number of spiral turns defines the maximum
 # k-space extent.
 
-kMax = (2*n)/foe/2       # Units of 1/m (not rad/m)
-#tk = np.arange(0,T-seq.gradRasterTime, seq.gradRasterTime) # arange is not reliable for floats!
-tk = np.linspace(0,T-seq.gradRasterTime, T/seq.gradRasterTime)
-kx = kMax*(1-tk/T)*np.cos(2*np.pi*n*tk/T)
-ky = kMax*(1-tk/T)*np.sin(2*np.pi*n*tk/T)
+k_max = (2*n)/foe/2       # Units of 1/m (not rad/m)
+tk = np.linspace(0, T-seq.grad_raster_time, T/seq.grad_raster_time)
+kx = k_max*(1-tk/T)*np.cos(2*np.pi*n*tk/T)
+ky = k_max*(1-tk/T)*np.sin(2*np.pi*n*tk/T)
 
 plt.figure
 plt.plot(kx, ky)
@@ -51,10 +52,11 @@ plt.xlabel(r'$k_x (1/m)$')
 plt.ylabel(r'$k_y (1/m)$')
 plt.show()
 
-## RF pulse definition
+##
+# RF pulse definition
 # The RF pulse is defined closely following Pauly et al, JMR 1989;
 # 81:43-56. The target excitation is a Gaussian defined by
-# 
+#
 # $$f(x) = a \exp(-|x|^2/\sigma^2)$$
 #
 # The equivalent in k-space is calculated with the Fourier transform
@@ -65,19 +67,19 @@ plt.show()
 #
 # $$\beta = \frac{2\pi K_{\rm max} \sigma}{2\sqrt{2}}$$
 
-tr = np.arange(0,T-seq.rfRasterTime, seq.rfRasterTime)
+tr = np.arange(0, T-seq.rf_raster_time, seq.rf_raster_time)
 f = interp1d(tk, kx, kind='linear', fill_value='extrapolate')
-kxRf = f(tr)
+kx_rf = f(tr)
 f = interp1d(tk, ky, kind='linear', fill_value='extrapolate')
-kyRf = f(tr)
-beta = 2*np.pi*kMax*targetWidth/2/np.sqrt(2)    # Gaussian width in k-space
+ry_rf = f(tr)
+beta = 2*np.pi*k_max*target_width/2/np.sqrt(2)    # Gaussian width in k-space
 signal0 = np.exp(-beta**2*(1-tr/T)**2)*np.sqrt((2*np.pi*n*(1-tr/T))**2+1)
 
-## 
+##
 # Two RF waveforms are superimposed to excite a replica pattern offset 5cm
 # in x and y directions. The shifted pattern is achieved with modulation by
 # a complex exponential
-signal = signal0*(1+np.exp(-1j*2*np.pi*5e-2*(kxRf+kyRf)))
+signal = signal0*(1+np.exp(-1j*2*np.pi*5e-2*(kx_rf+ry_rf)))
 
 plt.figure(2)
 plt.plot(1e3*tr, signal.real, 1e3*tr, signal.imag)
@@ -86,10 +88,10 @@ plt.ylabel('Signal (Hz)')
 plt.show()
 
 ##
-# Add gradient ramps to achieve the starting gradient value and moment 
+# Add gradient ramps to achieve the starting gradient value and moment
 # (first k-space point) and likewise ramp the gradients to zero afterwards.
 # the RF pulse is also padded with zeros during the ramp times.
-out = mr.addRamps([kx, ky], rf=signal)
+out = mr.add_ramps([kx, ky], rf=signal)
 kx = out[0]
 ky = out[1]
 signal = out[2]
@@ -102,48 +104,49 @@ signal = out[2]
 gx = mr.traj2grad(kx)
 gy = mr.traj2grad(ky)
 
-rf = mr.makeArbitraryRf(signal, 20*np.pi/180)
-gxRf = mr.makeArbitraryGrad('x', gx)
-gyRf = mr.makeArbitraryGrad('y', gy)
+rf = mr.make_arbitrary_rf(signal, 20*np.pi/180)
+gx_rf = mr.make_arbitrary_grad('x', gx)
+gy_rf = mr.make_arbitrary_grad('y', gy)
 
-## 
+##
 # Define other gradients and ADC events
 deltak = 1/fov
-gx = mr.makeTrapezoid('x', flatArea=Nx*deltak, flatTime= 6.4e-3)
-adc = mr.makeAdc(Nx, duration=gx.flatTime, delay=gx.riseTime)
-gxPre = mr.makeTrapezoid('x', area=-gx.area/2, duration=2e-3)
-phaseAreas = (np.arange(Ny)-Ny/2)*deltak
+gx = mr.make_trapezoid('x', flat_area=Nx*deltak, flat_time=6.4e-3)
+adc = mr.make_adc(Nx, duration=gx.flat_time, delay=gx.rise_time)
+gx_pre = mr.make_trapezoid('x', area=-gx.area/2, duration=2e-3)
+phase_areas = (np.arange(Ny)-Ny/2)*deltak
 
 ##
 # Refocusing pulse and spoiling gradients
 # the refocusing pulse selects a single slice through the excited volume
-rf180 = mr.makeBlockPulse(np.pi, duration=1e-3, sliceThickness=5e-3)
+rf180 = mr.make_block_pulse(np.pi, duration=1e-3, slice_thickness=5e-3)
 gz = rf180.gz
-gzSpoil = mr.makeTrapezoid('z', area=gx.area, duration=2e-3)
+gz_spoil = mr.make_trapezoid('z', area=gx.area, duration=2e-3)
 
 ##
 # Calculate timing
 # Echo time and repetition time are TE=20ms, TR=500ms
-delayTE1 = (20e-3)/2 - mr.calcDuration(gzSpoil) - mr.calcDuration(rf180)/2
-delayTE2 = delayTE1 - mr.calcDuration(gxPre) - mr.calcDuration(gx)/2
-delayTR  = 500e-3 - 20e-3 - mr.calcDuration(rf) - mr.calcDuration(gx)/2
+delayTE1 = (20e-3)/2 - mr.calc_duration(gz_spoil) - mr.calc_duration(rf180)/2
+delayTE2 = delayTE1 - mr.calc_duration(gx_pre) - mr.calc_duration(gx)/2
+delayTR = 500e-3 - 20e-3 - mr.calc_duration(rf) - mr.calc_duration(gx)/2
 
 ##
 # Define sequence blocks
 # Loop over phase encodes and define sequence blocks
 for i in range(Ny):
-    seq.addBlock([rf, gxRf, gyRf])
-    seq.addBlock(mr.makeDelay(delayTE1))
-    seq.addBlock(gzSpoil)
-    seq.addBlock([rf180, gz])
-    seq.addBlock(gzSpoil)
-    seq.addBlock(mr.makeDelay(delayTE2))
-    gyPre = mr.makeTrapezoid('y', area=phaseAreas[i], duration=2e-3)
-    seq.addBlock([gxPre, gyPre])
-    seq.addBlock([gx, adc])
-    seq.addBlock(mr.makeDelay(delayTR))
+    seq.add_block([rf, gx_rf, gy_rf])
+    seq.add_block(mr.make_delay(delayTE1))
+    seq.add_block(gz_spoil)
+    seq.add_block([rf180, gz])
+    seq.add_block(gz_spoil)
+    seq.add_block(mr.make_delay(delayTE2))
+    gyPre = mr.make_trapezoid('y', area=phase_areas[i], duration=2e-3)
+    seq.add_block([gx_pre, gyPre])
+    seq.add_block([gx, adc])
+    seq.add_block(mr.make_delay(delayTR))
 
-## Write to file
+##
+# Write to file
 # The sequence is written to file in compressed form according to the file
 # format specification using the /write/ method.
 seq.write('bla.seq')
