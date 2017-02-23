@@ -11,6 +11,8 @@ import mr
 from EventLibrary import EventLibrary
 import numpy as np
 
+# pylint: disable=invalid-name
+
 
 class Sequence(object):
     """
@@ -43,10 +45,9 @@ class Sequence(object):
 
     Examples defining an MRI sequence and reading/writing files
 
-    Kelvin Layton <kelvin.layton@uniklinik-freiburg.de>
+        Kelvin Layton <kelvin.layton@uniklinik-freiburg.de>
     """
     # pylint: disable=too-many-instance-attributes
-    # pylint: disable=invalid-name
     # pylint: disable=too-many-branches
     # pylint: disable=too-many-statements
     # pylint: disable=too-many-locals
@@ -61,34 +62,34 @@ class Sequence(object):
         :param args: arguments datastructure
         """
         # Event table (references to events)
-        self.blockEvents = np.zeros((0, 6))
+        self.block_events = np.zeros((0, 6))
 
         self.definitions = dict()  # Optional sequence defintions
-        self.gradLibrary = EventLibrary()  # Library of gradient events
-        self.shapeLibrary = EventLibrary()  # Library of compressed shapes
-        self.rfLibrary = EventLibrary()  # Library of RF events
-        self.adcLibrary = EventLibrary()  # Library of ADC readouts
-        self.delayLibrary = EventLibrary()  # Library of delay events
+        self.grad_library = EventLibrary()  # Library of gradient events
+        self.shape_library = EventLibrary()  # Library of compressed shapes
+        self.rf_library = EventLibrary()  # Library of RF events
+        self.adc_library = EventLibrary()  # Library of ADC readouts
+        self.delay_library = EventLibrary()  # Library of delay events
 
         # #ifdef EXTERNAL_GRADS
         # 2D struct array of compressed external gradients
-        self.gradExternal = dict([('numSamples', []), ('data', [])])
+        self.grad_external = dict([('num_samples', []), ('data', [])])
         # Used to track duration blocks for external grads
-        self.gradLength = []
+        self.grad_length = []
         # Offset on the nonlinear gradient channels
-        self.gradOffsets = np.zeros((12, 1))
+        self.grad_offsets = np.zeros((12, 1))
         # #endif
 
         if system is None:
             system = mr.opts()
 
         # RF raster time (system dependent)
-        self.rfRasterTime = system['rfRasterTime']
+        self.rf_raster_time = system['rf_raster_time']
         # Gradient raster time (system dependent)
-        self.gradRasterTime = system['gradRasterTime']
+        self.grad_raster_time = system['grad_raster_time']
 
     # #ifdef EXTERNAL_GRADS
-    def setOffset(self, offsets, args):
+    def set_offset(self, offsets, args):
         """
         TODO
         """
@@ -96,7 +97,7 @@ class Sequence(object):
     # #endif
 
     # #ifdef EXTERNAL_GRADS
-    def resetOffset(self, args):
+    def reset_offset(self, args):
         """
         TODO
         """
@@ -131,81 +132,82 @@ class Sequence(object):
         f.write('# Format of blocks:\n')
         f.write('#  #  D RF  GX  GY  GZ ADC\n')
         f.write('[BLOCKS]\n')
-        idFormatWidth = len(str(self.blockEvents.shape[0]))
-        idFormatStr = "%" + str(idFormatWidth) + "d"
-        for i in range(self.blockEvents.shape[0]):
-            t = tuple(np.concatenate(([i+1], self.blockEvents[i, :])).tolist())
-            f.write((idFormatStr + " %2d %2d %3d %3d %3d %2d\n") % t)
+        id_format_width = len(str(self.block_events.shape[0]))
+        id_format_str = "%" + str(id_format_width) + "d"
+        for i in range(self.block_events.shape[0]):
+            t = tuple(np.concatenate(([i+1],
+                                      self.block_events[i, :])).tolist())
+            f.write((id_format_str + " %2d %2d %3d %3d %3d %2d\n") % t)
         f.write('\n')
 
-        if self.rfLibrary.keys:
+        if self.rf_library.keys:
             f.write('# Format of RF events:\n')
             f.write('# id amplitude mag_id phase_id freq phase\n')
             f.write('# ..        Hz   ....     ....   Hz   rad\n')
             f.write('[RF]\n')
-            for key in self.rfLibrary.keys:
-                libData = tuple(
+            for key in self.rf_library.keys:
+                lib_data = tuple(
                     np.concatenate(
                         ([key],
-                         self.rfLibrary.data[key].flatten()[0:5])).tolist())
-                f.write("%d %12g %d %d %g %g\n" % libData)
+                         self.rf_library.data[key].flatten()[0:5])).tolist())
+                f.write("%d %12g %d %d %g %g\n" % lib_data)
             f.write('\n')
 
-        arbGradIDs = self.gradLibrary.getIDsOfType('g')
-        trapGradIDs = self.gradLibrary.getIDsOfType('t')
+        arb_grad_ids = self.grad_library.getIDsOfType('g')
+        trap_grad_ids = self.grad_library.getIDsOfType('t')
 
-        if any(arbGradIDs):
+        if any(arb_grad_ids):
             f.write('# Format of arbitrary gradients:\n')
             f.write('# id amplitude shape_id\n')
             f.write('# ..      Hz/m     ....\n')
             f.write('[GRADIENTS]\n')
-            for key in arbGradIDs:
-                libData = tuple(
+            for key in arb_grad_ids:
+                lib_data = tuple(
                     np.concatenate(
                         ([key],
-                         self.gradLibrary.data[key].flatten()[:])).tolist())
-                f.write("%d %12g %d \n" % libData)
+                         self.grad_library.data[key].flatten()[:])).tolist())
+                f.write("%d %12g %d \n" % lib_data)
             f.write('\n')
 
-        if any(trapGradIDs):
+        if any(trap_grad_ids):
             f.write('# Format of trapezoid gradients:\n')
             f.write('# id amplitude rise flat fall\n')
             f.write('# ..      Hz/m   us   us   us\n')
             f.write('[TRAP]\n')
-            for key in trapGradIDs:
-                data = self.gradLibrary.data[key].flatten()[:]
+            for key in trap_grad_ids:
+                data = self.grad_library.data[key].flatten()[:]
                 data[1:] = np.round(1e6*data[1:])
-                libData = tuple(np.concatenate(([key], data)).tolist())
-                f.write("%2d %12g %3d %4d %3d\n" % libData)
+                lib_data = tuple(np.concatenate(([key], data)).tolist())
+                f.write("%2d %12g %3d %4d %3d\n" % lib_data)
             f.write('\n')
 
-        if self.adcLibrary.keys:
+        if self.adc_library.keys:
             f.write('# Format of ADC events:\n')
             f.write('# id num dwell delay freq phase\n')
             f.write('# ..  ..    ns    us   Hz   rad\n')
             f.write('[ADC]\n')
-            for key in self.adcLibrary.keys:
-                data = self.adcLibrary.data[key][:5] * \
+            for key in self.adc_library.keys:
+                data = self.adc_library.data[key][:5] * \
                     np.array([1, 1e9, 1e6, 1, 1])
                 data = tuple(np.concatenate(([key], data)))
                 f.write('%2d %3d %6d %3d %g %g\n' % data)
             f.write('\n')
 
-        if self.delayLibrary.keys:
+        if self.delay_library.keys:
             f.write('# Format of delays:\n')
             f.write('# id delay (us)\n')
             f.write('[DELAYS]\n')
-            for key in self.delayLibrary.keys:
-                data = np.round(1e6*self.delayLibrary.data[key])
+            for key in self.delay_library.keys:
+                data = np.round(1e6*self.delay_library.data[key])
                 data = tuple(np.concatenate(([key], [data])))
                 f.write('%d %d\n' % data)
             f.write('\n')
 
-        if self.shapeLibrary.keys:
+        if self.shape_library.keys:
             f.write('# Sequence Shapes\n')
             f.write('[SHAPES]\n\n')
-            for key in self.shapeLibrary.keys:
-                data = self.shapeLibrary.data[key]
+            for key in self.shape_library.keys:
+                data = self.shape_library.data[key]
                 f.write('shape_id %d\n' % key)
                 f.write('num_samples %d\n' % data[0])
                 for d in data[1:]:
@@ -213,19 +215,19 @@ class Sequence(object):
                 f.write('\n')
         f.close()
 
-    def readBinary(self, filename):
+    def read_binary(self, filename):
         """
         TODO
         """
         pass
 
-    def writeBinary(self, filename):
+    def write_binary(self, filename):
         """
         TODO
         """
         pass
 
-    def getDefinition(self, key):
+    def get_definition(self, key):
         """
         Return the value of the definition specified by the key.
 
@@ -240,7 +242,7 @@ class Sequence(object):
         else:
             return None
 
-    def setDefinition(self, key, val):
+    def set_definition(self, key, val):
         """
         Set the user definition 'key' to value 'val'. If definition
         does not exist it will be created.
@@ -249,7 +251,7 @@ class Sequence(object):
         """
         self.definitions[key] = val
 
-    def addBlock(self, blocks):
+    def add_block(self, blocks):
         """
         Add new blocks to the sequence.
         blocks is either an individual block or a list of individual blocks
@@ -258,11 +260,11 @@ class Sequence(object):
         """
         if type(blocks) is not list:
             blocks = [blocks]
-        self.setBlock(self.blockEvents.shape[0]+1, blocks)
+        self.set_block(self.block_events.shape[0]+1, blocks)
 
     # TODO: Replacing blocks in the middle of sequence can cause unused
     # events in the libraries. These can be detected and pruned.
-    def setBlock(self, index, blocks):
+    def set_block(self, index, blocks):
         """
         Replace sequence block at index with new block provided as
         list of blocks.
@@ -272,15 +274,15 @@ class Sequence(object):
 
         See also getBlock, addBlock
         """
-        if index-1 < self.blockEvents.shape[0]:
-            self.blockEvents[index-1, :] = np.zeros((1, 6))
+        if index-1 < self.block_events.shape[0]:
+            self.block_events[index-1, :] = np.zeros((1, 6))
         else:
-            self.blockEvents = np.pad(self.blockEvents, ((0, 1), (0, 0)),
-                                      'constant', constant_values=0)
+            self.block_events = np.pad(self.block_events, ((0, 1), (0, 0)),
+                                       'constant', constant_values=0)
 
         duration = 0
         # #ifdef EXTERNAL_GRADS
-        externalWaveforms = np.zeros((0, 12))
+        external_waveforms = np.zeros((0, 12))
         # #endif
 
         # Loop over events adding to library if necessary and creating
@@ -297,147 +299,150 @@ class Sequence(object):
                 phase[phase < 0] = phase[phase < 0]+2.0*np.pi
                 phase = phase/(2.0*np.pi)
 
-                magShape = mr.compressShape(mag.flatten())
-                data = np.concatenate(([magShape.numSamples],
-                                       magShape.data.flatten()))
-                magOut = self.shapeLibrary.find(data)
-                if not magOut.found:
-                    self.shapeLibrary.insert(magOut.id, data)
+                mag_shape = mr.compress_shape(mag.flatten())
+                data = np.concatenate(([mag_shape.num_samples],
+                                       mag_shape.data.flatten()))
+                mag_out = self.shape_library.find(data)
+                if not mag_out.found:
+                    self.shape_library.insert(mag_out.id, data)
 
-                phaseShape = mr.compressShape(phase.flatten())
-                data = np.concatenate(([phaseShape.numSamples],
-                                       phaseShape.data.flatten()))
-                phaseOut = self.shapeLibrary.find(data)
-                if not phaseOut.found:
-                    self.shapeLibrary.insert(phaseOut.id, data)
+                phase_shape = mr.compress_shape(phase.flatten())
+                data = np.concatenate(([phase_shape.num_samples],
+                                       phase_shape.data.flatten()))
+                phase_out = self.shape_library.find(data)
+                if not phase_out.found:
+                    self.shape_library.insert(phase_out.id, data)
 
-                data = np.array([amplitude, magOut.id, phaseOut.id,
+                data = np.array([amplitude, mag_out.id, phase_out.id,
                                  event.freqOffset, event.phaseOffset,
                                  event.deadTime, event.ringdownTime])
-                out = self.rfLibrary.find(data)
+                out = self.rf_library.find(data)
                 if not out.found:
-                    self.rfLibrary.insert(out.id, data)
+                    self.rf_library.insert(out.id, data)
 
-                self.blockEvents[index-1, 1] = out.id
+                self.block_events[index-1, 1] = out.id
                 duration = np.max(duration,
-                                  mag.size*self.rfRasterTime +
+                                  mag.size*self.rf_raster_time +
                                   event.deadTime +
                                   event.ringdownTime)
             elif event.type == 'grad':
-                gradList = ['x', 'y', 'z']
-                if event.channel in gradList:
-                    channelNum = gradList.index(event.channel)
+                grad_list = ['x', 'y', 'z']
+                if event.channel in grad_list:
+                    channel_num = grad_list.index(event.channel)
 
                     amplitude = np.max(np.abs(event.waveform))
                     g = event.waveform/amplitude
-                    shape = mr.compressShape(g)
-                    data = np.concatenate(([shape.numSamples],
+                    shape = mr.compress_shape(g)
+                    data = np.concatenate(([shape.num_samples],
                                            shape.data.flatten()))
-                    shapeOut = self.shapeLibrary.find(data)
-                    if not shapeOut.found:
-                        self.shapeLibrary.insert(shapeOut.id, data)
+                    shape_out = self.shape_library.find(data)
+                    if not shape_out.found:
+                        self.shape_library.insert(shape_out.id, data)
 
-                    data = np.array([amplitude, shapeOut.id])
-                    gradOut = self.gradLibrary.find(data)
-                    if not gradOut.found:
-                        self.gradLibrary.insert(gradOut.id, data, 'g')
+                    data = np.array([amplitude, shape_out.id])
+                    grad_out = self.grad_library.find(data)
+                    if not grad_out.found:
+                        self.grad_library.insert(grad_out.id, data, 'g')
 
-                    idx = 2+channelNum
-                    self.blockEvents[index-1, idx] = gradOut.id
-                    duration = np.max(duration, g.size*self.gradRasterTime)
+                    idx = 2+channel_num
+                    self.block_events[index-1, idx] = grad_out.id
+                    duration = np.max(duration, g.size*self.grad_raster_time)
                 # #ifdef EXTERNAL_GRADS
                 else:
-                    channelNum = int(event.channel)
-                    externalWaveforms[0:len(event.waveform),
-                                      channelNum-1] = event.waveform
+                    channel_num = int(event.channel)
+                    external_waveforms[0:len(event.waveform),
+                                       channel_num-1] = event.waveform
                 # #endif
             elif event.type == 'trap':
-                gradList = ['x', 'y', 'z']
-                if event.channel in gradList:
-                    channelNum = gradList.index(event.channel)
+                grad_list = ['x', 'y', 'z']
+                if event.channel in grad_list:
+                    channel_num = grad_list.index(event.channel)
 
                     data = np.array([event.amplitude, event.riseTime,
                                      event.flatTime, event.fallTime])
-                    gradOut = self.gradLibrary.find(data)
-                    if not gradOut.found:
-                        self.gradLibrary.insert(gradOut.id, data, 't')
+                    grad_out = self.grad_library.find(data)
+                    if not grad_out.found:
+                        self.grad_library.insert(grad_out.id, data, 't')
 
-                    idx = 2+channelNum
-                    self.blockEvents[index-1, idx] = gradOut.id
+                    idx = 2+channel_num
+                    self.block_events[index-1, idx] = grad_out.id
                     duration = np.max(duration,
                                       event.riseTime +
                                       event.flatTime +
                                       event.fallTime)
                 # #ifdef EXTERNAL_GRADS
                 else:
-                    channelNum = int(event.channel)
-                    numRise = int(np.round(event.riseTime/self.gradRasterTime))
-                    numFlat = int(np.round(event.flatTime/self.gradRasterTime))
-                    numFall = int(np.round(event.fallTime/self.gradRasterTime))
-                    waveform = np.concatenate(((np.arange(numRise)+1) *
-                                               event.amplitude/numRise,
-                                               np.ones(numFlat, 1) *
+                    channel_num = int(event.channel)
+                    num_rise = int(np.round(event.riseTime /
+                                            self.grad_raster_time))
+                    num_flat = int(np.round(event.flatTime /
+                                            self.grad_raster_time))
+                    num_fall = int(np.round(event.fallTime /
+                                            self.grad_raster_time))
+                    waveform = np.concatenate(((np.arange(num_rise)+1) *
+                                               event.amplitude/num_rise,
+                                               np.ones(num_flat, 1) *
                                                event.amplitude,
-                                               (np.arange(numFall-1, 0, -1)) *
-                                               event.amplitude/numFall))
-                    externalWaveforms[0:len(event.waveform),
-                                      channelNum-1] = waveform
+                                               (np.arange(num_fall-1, 0, -1)) *
+                                               event.amplitude/num_fall))
+                    external_waveforms[0:len(event.waveform),
+                                       channel_num-1] = waveform
                 # #endif
             elif event.type == 'adc':
-                data = np.array([event.numSamples, event.dwell, event.delay,
+                data = np.array([event.num_samples, event.dwell, event.delay,
                                  event.freqOffset, event.phaseOffset,
                                  event.deadTime])
-                adcOut = self.adcLibrary.find(data)
-                if not adcOut.found:
-                    self.adcLibrary.insert(adcOut.id, data)
-                self.blockEvents[index-1, 5] = adcOut.id
+                adc_out = self.adc_library.find(data)
+                if not adc_out.found:
+                    self.adc_library.insert(adc_out.id, data)
+                self.block_events[index-1, 5] = adc_out.id
                 duration = np.max(duration,
                                   event.delay +
-                                  event.numSamples * event.dwell +
+                                  event.num_samples * event.dwell +
                                   event.deadTime)
             elif event.type == 'delay':
                 data = event.delay
-                delayOut = self.delayLibrary.find(data)
-                if not delayOut.found:
-                    self.delayLibrary.insert(delayOut.id, data)
-                self.blockEvents[index-1, 0] = delayOut.id
+                delay_out = self.delay_library.find(data)
+                if not delay_out.found:
+                    self.delay_library.insert(delay_out.id, data)
+                self.block_events[index-1, 0] = delay_out.id
                 duration = max(duration, event.delay)
         # #ifdef EXTERNAL_GRADS
-        durationExternal = externalWaveforms.shape[0]*self.gradRasterTime
-        if (durationExternal-duration) > 1e-6:
+        duration_external = external_waveforms.shape[0]*self.grad_raster_time
+        if (duration_external-duration) > 1e-6:
             # External gradient is longer, add delay to linear system
-            delay = durationExternal - duration
-            delayOut = self.delayLibrary.find(delay)
-            if not delayOut.found:
-                self.delayLibrary.insert(delayOut.id, delay)
+            delay = duration_external - duration
+            delay_out = self.delay_library.find(delay)
+            if not delay_out.found:
+                self.delay_library.insert(delay_out.id, delay)
             if duration > 0:
                 # Add delay on next block
-                self.blockEvents[index, 0] = delayOut.id
+                self.block_events[index, 0] = delay_out.id
             else:
                 # add delay on current block
-                self.blockEvents[index-1, 0] = delayOut.id
-        elif (duration-np.min(durationExternal)) > 1e-6:
+                self.block_events[index-1, 0] = delay_out.id
+        elif (duration-np.min(duration_external)) > 1e-6:
             # linear system is longer, add semples to external grads
-            numPadSamples = int(
-                np.round((duration-durationExternal)/self.gradRasterTime))
-            if externalWaveforms == []:  # TODO: Potential problem
-                self.gradLength[index-1] = numPadSamples
+            num_pad_samples = int(
+                np.round((duration-duration_external)/self.grad_raster_time))
+            if external_waveforms == []:  # TODO: Potential problem
+                self.grad_length[index-1] = num_pad_samples
                 return
             else:
-                externalWaveforms = np.concatenate(
-                    (externalWaveforms, np.zeros((numPadSamples, 12))))
+                external_waveforms = np.concatenate(
+                    (external_waveforms, np.zeros((num_pad_samples, 12))))
         # Non-empty external waveform so compress
-        if durationExternal > 0:  # TODO: Check this (SK)
-            if index-1 < len(self.gradLength):
-                self.gradLength[index-1] = externalWaveforms.shape[0]
+        if duration_external > 0:  # TODO: Check this (SK)
+            if index-1 < len(self.grad_length):
+                self.grad_length[index-1] = external_waveforms.shape[0]
             else:
-                self.gradLength.append(externalWaveforms.shape[0])
+                self.grad_length.append(external_waveforms.shape[0])
             for i in range(12):
-                self.gradExternal[index-1, i] = mr.compressShape(
-                    externalWaveforms[:, i])
+                self.grad_external[index-1, i] = mr.compress_shape(
+                    external_waveforms[:, i])
         # #endif
 
-    def getBlock(self, index):
+    def get_block(self, index):
         """
         TODO
         """
@@ -455,7 +460,7 @@ class Sequence(object):
         """
         pass
 
-    def getBinaryCodes(self):
+    def get_binary_codes(self):
         """
         TODO
         """
