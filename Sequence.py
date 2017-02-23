@@ -153,8 +153,8 @@ class Sequence(object):
                 f.write("%d %12g %d %d %g %g\n" % lib_data)
             f.write('\n')
 
-        arb_grad_ids = self.grad_library.getIDsOfType('g')
-        trap_grad_ids = self.grad_library.getIDsOfType('t')
+        arb_grad_ids = self.grad_library.get_ids_of_type('g')
+        trap_grad_ids = self.grad_library.get_ids_of_type('t')
 
         if any(arb_grad_ids):
             f.write('# Format of arbitrary gradients:\n')
@@ -314,23 +314,23 @@ class Sequence(object):
                     self.shape_library.insert(phase_out.id, data)
 
                 data = np.array([amplitude, mag_out.id, phase_out.id,
-                                 event.freqOffset, event.phaseOffset,
-                                 event.deadTime, event.ringdownTime])
+                                 event.freq_offset, event.phase_offset,
+                                 event.dead_time, event.ringdown_time])
                 out = self.rf_library.find(data)
                 if not out.found:
                     self.rf_library.insert(out.id, data)
 
                 self.block_events[index-1, 1] = out.id
-                duration = np.max(duration,
-                                  mag.size*self.rf_raster_time +
-                                  event.deadTime +
-                                  event.ringdownTime)
+                duration = np.maximum(duration,
+                                      mag.size*self.rf_raster_time +
+                                      event.dead_time +
+                                      event.ringdown_time)
             elif event.type == 'grad':
                 grad_list = ['x', 'y', 'z']
                 if event.channel in grad_list:
                     channel_num = grad_list.index(event.channel)
 
-                    amplitude = np.max(np.abs(event.waveform))
+                    amplitude = np.maximum(np.abs(event.waveform))
                     g = event.waveform/amplitude
                     shape = mr.compress_shape(g)
                     data = np.concatenate(([shape.num_samples],
@@ -346,7 +346,8 @@ class Sequence(object):
 
                     idx = 2+channel_num
                     self.block_events[index-1, idx] = grad_out.id
-                    duration = np.max(duration, g.size*self.grad_raster_time)
+                    duration = np.maximum(duration,
+                                          g.size*self.grad_raster_time)
                 # #ifdef EXTERNAL_GRADS
                 else:
                     channel_num = int(event.channel)
@@ -358,26 +359,26 @@ class Sequence(object):
                 if event.channel in grad_list:
                     channel_num = grad_list.index(event.channel)
 
-                    data = np.array([event.amplitude, event.riseTime,
-                                     event.flatTime, event.fallTime])
+                    data = np.array([event.amplitude, event.rise_time,
+                                     event.flat_time, event.fall_time])
                     grad_out = self.grad_library.find(data)
                     if not grad_out.found:
                         self.grad_library.insert(grad_out.id, data, 't')
 
                     idx = 2+channel_num
                     self.block_events[index-1, idx] = grad_out.id
-                    duration = np.max(duration,
-                                      event.riseTime +
-                                      event.flatTime +
-                                      event.fallTime)
+                    duration = np.maximum(duration,
+                                          event.rise_time +
+                                          event.flat_time +
+                                          event.fall_time)
                 # #ifdef EXTERNAL_GRADS
                 else:
                     channel_num = int(event.channel)
-                    num_rise = int(np.round(event.riseTime /
+                    num_rise = int(np.round(event.rise_time /
                                             self.grad_raster_time))
-                    num_flat = int(np.round(event.flatTime /
+                    num_flat = int(np.round(event.flat_time /
                                             self.grad_raster_time))
-                    num_fall = int(np.round(event.fallTime /
+                    num_fall = int(np.round(event.fall_time /
                                             self.grad_raster_time))
                     waveform = np.concatenate(((np.arange(num_rise)+1) *
                                                event.amplitude/num_rise,
@@ -390,23 +391,23 @@ class Sequence(object):
                 # #endif
             elif event.type == 'adc':
                 data = np.array([event.num_samples, event.dwell, event.delay,
-                                 event.freqOffset, event.phaseOffset,
-                                 event.deadTime])
+                                 event.freq_offset, event.phase_offset,
+                                 event.dead_time])
                 adc_out = self.adc_library.find(data)
                 if not adc_out.found:
                     self.adc_library.insert(adc_out.id, data)
                 self.block_events[index-1, 5] = adc_out.id
-                duration = np.max(duration,
-                                  event.delay +
-                                  event.num_samples * event.dwell +
-                                  event.deadTime)
+                duration = np.maximum(duration,
+                                      event.delay +
+                                      event.num_samples * event.dwell +
+                                      event.dead_time)
             elif event.type == 'delay':
                 data = event.delay
                 delay_out = self.delay_library.find(data)
                 if not delay_out.found:
                     self.delay_library.insert(delay_out.id, data)
                 self.block_events[index-1, 0] = delay_out.id
-                duration = max(duration, event.delay)
+                duration = np.maximum(duration, event.delay)
         # #ifdef EXTERNAL_GRADS
         duration_external = external_waveforms.shape[0]*self.grad_raster_time
         if (duration_external-duration) > 1e-6:

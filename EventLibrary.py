@@ -103,4 +103,4 @@ class EventLibrary(object):
         """
         Return all IDs with a given type
         """
-        return [k for (k, v) in self.type.iteritems() if v == ttype]
+        return [k for (k, v) in self.type.items() if v == ttype]

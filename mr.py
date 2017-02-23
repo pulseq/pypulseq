@@ -14,15 +14,15 @@ import collections
 
 # define Events
 RFPulse = collections.namedtuple('rf', ['type', 'signal', 't', 'freq_offset',
-                                        'phase_offset', 'deadTime',
-                                        'ringdownTime', 'gz'])
+                                        'phase_offset', 'dead_time',
+                                        'ringdown_time', 'gz'])
 Gradient = collections.namedtuple('grad', ['type', 'channel', 'amplitude',
                                            'rise_time', 'flat_time',
                                            'fall_time', 'area', 'flat_area',
                                            't', 'waveform'])
 ADC = collections.namedtuple('adc', ['type', 'num_samples', 'dwell',
                                      'duration', 'delay', 'freq_offset',
-                                     'phase_offset', 'deadTime'])
+                                     'phase_offset', 'dead_time'])
 Delay = collections.namedtuple('delay', ['type', 'delay'])
 
 
@@ -502,11 +502,11 @@ def make_arbitrary_rf(signal, flip_angle, system=None, freq_offset=0,
     if system is None:
         system = opts()
 
-    signal = signal/np.sum(signal*system['rfRasterTime'])*flip_angle/(2*np.pi)
+    signal = signal/np.sum(signal*system['rf_raster_time'])*flip_angle/(2*np.pi)
 
     N = signal.size
-    duration = N*system['rfRasterTime']
-    t = np.arange(1, N+1)*system['rfRasterTime']
+    duration = N*system['rf_raster_time']
+    t = np.arange(1, N+1)*system['rf_raster_time']
 
     if (slice_thickness is not None) and (bandwidth is not None):
         if max_grad is not None:
@@ -562,11 +562,11 @@ def make_sinc_pulse(flip_angle, system=None, duration=0, freq_offset=0,
     BW = time_bw_product/np.float(duration)
     alpha = apodization
     N = np.round(duration/1.0e-6)
-    t = (np.arange(N)+1)*system['rfRasterTime']
+    t = (np.arange(N)+1)*system['rf_raster_time']
     tt = t - duration/2.0
     window = (1.0-alpha+alpha*np.cos(2*np.pi*tt/duration))
     signal = window * np.sinc(BW*tt)
-    flip = np.sum(signal)*system['rfRasterTime']*2*np.pi
+    flip = np.sum(signal)*system['rf_raster_time']*2*np.pi
     signal = signal*flip_angle/flip
 
     fill_time = 0
@@ -752,7 +752,7 @@ def make_adc(num_samples, system=None, dwell=0, duration=0, delay=0,
             system. For example, a dead time after sampling can be added to the
             duration
 
-    TODO: System limits not really satisified! Apart from deadTime... (SK)
+    TODO: System limits not really satisified! Apart from dead_time... (SK)
 
     See also Sequence.addBlock
     """
@@ -777,7 +777,7 @@ def make_adc(num_samples, system=None, dwell=0, duration=0, delay=0,
         duration = dwell*num_samples
 
     return ADC('adc', num_samples, dwell, duration, delay, freq_offset,
-               phase_offset, system['adcDeadTime'])
+               phase_offset, system['adc_dead_time'])
 
 
 def make_block_pulse(flip_angle, duration=0, system=None, freq_offset=0,
@@ -809,7 +809,7 @@ def make_block_pulse(flip_angle, duration=0, system=None, freq_offset=0,
 
     BW = 1/(4*duration)
     N = np.round(duration/1e-6)
-    t = (np.arange(N)+1)*system['rfRasterTime']
+    t = (np.arange(N)+1)*system['rf_raster_time']
     signal = flip_angle/(2*np.pi)/duration*np.ones(t.shape)
 
     fill_time = 0
@@ -861,13 +861,13 @@ def calc_duration(blocks):
         if block.type == 'delay':
             duration = max(duration, block.delay)
         elif block.type == 'rf':
-            duration = max(duration, block.t[-1]+block.deadTime +
-                           block.ringdownTime)
+            duration = max(duration, block.t[-1]+block.dead_time +
+                           block.ringdown_time)
         elif block.type == 'grad':
             duration = max(duration, block.t[-1])
         elif block.type == 'adc':
             duration = max(duration, block.delay +
-                           block.num_samples*block.dwell + block.deadTime)
+                           block.num_samples*block.dwell + block.dead_time)
         elif block.type == 'trap':
             duration = max(duration, block.rise_time + block.flat_time +
                            block.fall_time)
