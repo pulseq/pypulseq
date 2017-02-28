@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=invalid-name
 """
 @author Stefan Kroboth
 """
@@ -9,28 +10,27 @@ import mr
 
 
 # Create new sequence object
-seq = Sequence() 
+seq = Sequence()
 
 # Define parameters
-Nx = 256
-Nrep = 1
+nx = 256
+nrep = 1
 
 # Create non-selective pulse
-rf = mr.makeBlockPulse(np.pi/2, duration=0.1e-3)
+rf = mr.make_block_pulse(np.pi/2, duration=0.1e-3)
 
 # Define delays and ADC evenets
-adc = mr.makeAdc(Nx, duration=3.2e-3)
-delayTE = 20e-3
-delayTR = 1000e-3
-delay1 = mr.makeDelay(delayTE)
+adc = mr.make_adc(nx, duration=3.2e-3)
+delay_te = 20e-3
+delay_tr = 1000e-3
+delay1 = mr.make_delay(delay_te)
 
 # Loop over repetitions and define sequence blocks
-for i in range(Nrep):
-    seq.addBlock(rf)
-    #seq.addBlock(mr.makeDelay(delayTE))
-    seq.addBlock(delay1)
-    seq.addBlock(adc)
-    seq.addBlock(mr.makeDelay(delayTR))
+for i in range(nrep):
+    seq.add_block(rf)
+    seq.add_block(delay1)
+    seq.add_block(adc)
+    seq.add_block(mr.make_delay(delay_tr))
 
 # Write to Pulseq file
 seq.write('fid.seq')
