@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=invalid-name
 """
 Create a 2D selective RF pulse for a spin echo sequence
 
@@ -15,7 +16,6 @@ This example performs the following steps:
 
 @author: Stefan Kroboth
 """
-# pylint: disable=invalid-name
 
 from Sequence import Sequence
 import numpy as np
