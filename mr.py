@@ -96,15 +96,19 @@ def convert(val, from_unit, to_unit=None):
     TODO
     """
 
+    if from_unit == to_unit:
+        # no conversion necessary
+        return val
+
     valid_grad_units = ['Hz/m', 'mT/m', 'rad/ms/mm']
     valid_slew_units = ['Hz/m/s', 'mT/m/ms', 'rad/ms/mm/ms']
 
     # #ifdef EXTERNAL_GRADS
-    valid_grad_units = valid_grad_units.extend(['A', ''])
-    valid_slew_units = valid_slew_units.extend(['A/s', '1/s'])
+    valid_grad_units.extend(['A', ''])
+    valid_slew_units.extend(['A/s', '1/s'])
     # #endif
 
-    gamma = 42.576e6  # Hz/T
+    gamma = 42.57747892e6  # Hz/T
 
     # set default output unit if not given
     if to_unit is None:
@@ -135,9 +139,9 @@ def convert(val, from_unit, to_unit=None):
     elif from_unit == '':
         standard = val
     elif from_unit == 'A':
-        standard = val/150  # careful
+        standard = val/150.0  # careful
     elif from_unit == 'A/s':
-        standard = val/150  # careful
+        standard = val/150.0  # careful
     # #endif
 
     # Grad units
