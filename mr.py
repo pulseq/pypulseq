@@ -11,6 +11,7 @@ TODO
 import numpy as np
 import numpy.linalg as linalg
 import collections
+import warnings
 
 # define Events
 RFPulse = collections.namedtuple('rf', ['type', 'signal', 't', 'freq_offset',
@@ -26,7 +27,7 @@ ADC = collections.namedtuple('adc', ['type', 'num_samples', 'dwell',
 Delay = collections.namedtuple('delay', ['type', 'delay'])
 
 
-def opts(grad_unit=None, slew_unit=None, max_grad=None, max_slew=None,
+def opts(grad_unit='mT/m', slew_unit='T/m/s', max_grad=40, max_slew=170,
          rise_time=None, rf_dead_time=None, rf_ringdown_time=None,
          adc_dead_time=None, rf_raster_time=None, grad_raster_time=None):
     """
@@ -37,32 +38,32 @@ def opts(grad_unit=None, slew_unit=None, max_grad=None, max_slew=None,
     valid_slew_units = ['Hz/m/s', 'mT/m/ms', 'rad/ms/mm/ms']
 
     # #ifdef EXTERNAL_GRADS
-    valid_grad_units = valid_grad_units.extend(['A', ''])
-    valid_slew_units = valid_slew_units.extend(['A/s', '1/s'])
+    valid_grad_units.extend(['A', ''])
+    valid_slew_units.extend(['A/s', '1/s'])
     # #endif
 
     grad_to_unit = 'Hz/m'
-    if max_grad is None:
-        max_grad = convert(40, 'mT/m', grad_to_unit)  # Default: 40 mT/m
-    else:
-        # #ifdef EXTERNAL_GRADS
-        if grad_unit == 'A/s':
-            max_grad = convert(max_grad, grad_unit, '')
-        # #endif EXTERNAL_GRADS
-        max_grad = convert(max_grad, grad_unit, grad_to_unit)
-        grad_unit = grad_to_unit
+    if grad_unit is None:
+        warnings.warn('No grad_unit given, will assume  mT/m')
+        grad_unit = 'mT/m'
+    # #ifdef EXTERNAL_GRADS
+    if grad_unit == 'A':
+        grad_to_unit = ''
+    # #endif EXTERNAL_GRADS
+
+    max_grad = convert(max_grad, grad_unit, grad_to_unit)
 
     slew_to_unit = 'Hz/m/s'
-    if max_slew is None:
-        max_slew = convert(170, 'T/m/s', slew_to_unit)
-        slew_unit = slew_to_unit
-    else:
-        # #ifdef EXTERNAL_GRADS
-        if slew_unit == 'A/s':
-            slew_to_unit = ''
-        # #endif EXTERNAL_GRADS
-        max_slew = convert(max_slew, slew_unit, slew_to_unit)
-        slew_unit = slew_to_unit
+    if slew_unit is None:
+        warnings.warn('No slew_unit given, will assume  T/m/s')
+        slew_unit = 'T/m/s'
+
+    # #ifdef EXTERNAL_GRADS
+    if slew_unit == 'A/s':
+        slew_to_unit = ''
+    # #endif EXTERNAL_GRADS
+
+    max_slew = convert(max_slew, slew_unit, slew_to_unit)
 
     if rise_time is not None:
         max_slew = None
@@ -77,8 +78,8 @@ def opts(grad_unit=None, slew_unit=None, max_grad=None, max_slew=None,
     if grad_raster_time is None:
         grad_raster_time = 10e-6
 
-    opt = {'grad_unit':        grad_unit,
-           'slew_unit':        slew_unit,
+    opt = {'grad_unit':        grad_to_unit,
+           'slew_unit':        slew_to_unit,
            'max_grad':         max_grad,
            'max_slew':         max_slew,
            'rise_time':        rise_time,
@@ -96,9 +97,8 @@ def convert(val, from_unit, to_unit=None):
     TODO
     """
 
-    if from_unit == to_unit:
-        # no conversion necessary
-        return val
+    if from_unit is None and to_unit is None:
+        raise ValueError('No units given.')
 
     valid_grad_units = ['Hz/m', 'mT/m', 'rad/ms/mm']
     valid_slew_units = ['Hz/m/s', 'mT/m/ms', 'rad/ms/mm/ms']
@@ -107,6 +107,21 @@ def convert(val, from_unit, to_unit=None):
     valid_grad_units.extend(['A', ''])
     valid_slew_units.extend(['A/s', '1/s'])
     # #endif
+
+    if from_unit is None:
+        if to_unit in valid_grad_units:
+            warnings.warn('No from_unit given, will assume gradient value \
+                          with unit Hz/m')
+            from_unit = 'Hz/m'
+        if to_unit in valid_slew_units:
+            warnings.warn('No from_unit given, will assume slew value \
+                          with unit Hz/m/s')
+            from_unit = 'Hz/m/s'
+
+
+    if from_unit == to_unit:
+        # no conversion necessary
+        return val
 
     gamma = 42.57747892e6  # Hz/T
 

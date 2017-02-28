@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Unit tests for the functionality in the mr toolbox
 
-@author: Stefan Kroboth
+@author: Stefan Kroboth <stefan.kroboth@uniklinik-freiburg.de>
 """
 
 import unittest as ut
-from mr import convert
+from mr import convert, opts
 from random import random
 import numpy as np
 
@@ -174,6 +175,149 @@ class TestConvert(ut.TestCase):
     def test_A_over_s_to_A_over_s(self):
         self.assertEqual(convert(self.num, 'A/s', 'A/s'), self.num)
 
+
+class TestOpts(ut.TestCase):
+    """Test opt struct creation functionality
+
+    Tests opt() function of mr.py
+
+    Author: Stefan Kroboth <stefan.kroboth@uniklinik-freiburg.de>
+    """
+    def __init__(self, *args, **kwargs):
+        super(TestOpts, self).__init__(*args, **kwargs)
+        self.num = abs(random())
+        self.gamma = 42.57747892e6  # Hz/T
+
+    def test_opts_all_None(self):
+        opt = {'grad_unit': 'Hz/m',
+               'slew_unit': 'Hz/m/s',
+               'max_grad': 40*1e-3*self.gamma,
+               'max_slew': 170*self.gamma,
+               'rise_time': None,
+               'rf_dead_time': 0,
+               'rf_ringdown_time': 0,
+               'adc_dead_time': 0,
+               'rf_raster_time': 1e-6,
+               'grad_raster_time': 10e-6}
+        self.assertEqual(opts(), opt)
+
+    def test_opts_max_grad_rand(self):
+        opt = {'grad_unit': 'Hz/m',
+               'slew_unit': 'Hz/m/s',
+               'max_grad': self.num*1e-3*self.gamma,
+               'max_slew': 170*self.gamma,
+               'rise_time': None,
+               'rf_dead_time': 0,
+               'rf_ringdown_time': 0,
+               'adc_dead_time': 0,
+               'rf_raster_time': 1e-6,
+               'grad_raster_time': 10e-6}
+        self.assertEqual(opts(max_grad=self.num), opt)
+
+    def test_opts_max_slew_rand(self):
+        opt = {'grad_unit': 'Hz/m',
+               'slew_unit': 'Hz/m/s',
+               'max_grad': 40*1e-3*self.gamma,
+               'max_slew': self.num*self.gamma,
+               'rise_time': None,
+               'rf_dead_time': 0,
+               'rf_ringdown_time': 0,
+               'adc_dead_time': 0,
+               'rf_raster_time': 1e-6,
+               'grad_raster_time': 10e-6}
+        self.assertEqual(opts(max_slew=self.num), opt)
+
+    def test_opts_rise_time_rand(self):
+        opt = {'grad_unit': 'Hz/m',
+               'slew_unit': 'Hz/m/s',
+               'max_grad': 40*1e-3*self.gamma,
+               'max_slew': None,
+               'rise_time': self.num,
+               'rf_dead_time': 0,
+               'rf_ringdown_time': 0,
+               'adc_dead_time': 0,
+               'rf_raster_time': 1e-6,
+               'grad_raster_time': 10e-6}
+        self.assertEqual(opts(rise_time=self.num), opt)
+
+    def test_opts_rf_dead_time_rand(self):
+        opt = {'grad_unit': 'Hz/m',
+               'slew_unit': 'Hz/m/s',
+               'max_grad': 40*1e-3*self.gamma,
+               'max_slew': 170*self.gamma,
+               'rise_time': None,
+               'rf_dead_time': self.num,
+               'rf_ringdown_time': 0,
+               'adc_dead_time': 0,
+               'rf_raster_time': 1e-6,
+               'grad_raster_time': 10e-6}
+        self.assertEqual(opts(rf_dead_time=self.num), opt)
+
+    def test_opts_rf_ringdown_time_rand(self):
+        opt = {'grad_unit': 'Hz/m',
+               'slew_unit': 'Hz/m/s',
+               'max_grad': 40*1e-3*self.gamma,
+               'max_slew': 170*self.gamma,
+               'rise_time': None,
+               'rf_dead_time': 0,
+               'rf_ringdown_time': self.num,
+               'adc_dead_time': 0,
+               'rf_raster_time': 1e-6,
+               'grad_raster_time': 10e-6}
+        self.assertEqual(opts(rf_ringdown_time=self.num), opt)
+
+    def test_opts_adc_dead_time_rand(self):
+        opt = {'grad_unit': 'Hz/m',
+               'slew_unit': 'Hz/m/s',
+               'max_grad': 40*1e-3*self.gamma,
+               'max_slew': 170*self.gamma,
+               'rise_time': None,
+               'rf_dead_time': 0,
+               'rf_ringdown_time': 0,
+               'adc_dead_time': self.num,
+               'rf_raster_time': 1e-6,
+               'grad_raster_time': 10e-6}
+        self.assertEqual(opts(adc_dead_time=self.num), opt)
+
+    def test_opts_rf_raster_time_rand(self):
+        opt = {'grad_unit': 'Hz/m',
+               'slew_unit': 'Hz/m/s',
+               'max_grad': 40*1e-3*self.gamma,
+               'max_slew': 170*self.gamma,
+               'rise_time': None,
+               'rf_dead_time': 0,
+               'rf_ringdown_time': 0,
+               'adc_dead_time': 0,
+               'rf_raster_time': self.num,
+               'grad_raster_time': 10e-6}
+        self.assertEqual(opts(rf_raster_time=self.num), opt)
+
+    def test_opts_grad_raster_time_rand(self):
+        opt = {'grad_unit': 'Hz/m',
+               'slew_unit': 'Hz/m/s',
+               'max_grad': 40*1e-3*self.gamma,
+               'max_slew': 170*self.gamma,
+               'rise_time': None,
+               'rf_dead_time': 0,
+               'rf_ringdown_time': 0,
+               'adc_dead_time': 0,
+               'rf_raster_time': 1e-6,
+               'grad_raster_time': self.num}
+        self.assertEqual(opts(grad_raster_time=self.num), opt)
+
+    def test_opts_external_grads(self):
+        opt = {'grad_unit': '',
+               'slew_unit': '',
+               'max_grad': self.num/150.0,
+               'max_slew': self.num/150.0,
+               'rise_time': None,
+               'rf_dead_time': 0,
+               'rf_ringdown_time': 0,
+               'adc_dead_time': 0,
+               'rf_raster_time': 1e-6,
+               'grad_raster_time': 10e-6}
+        self.assertEqual(opts(slew_unit='A/s', grad_unit='A',
+                              max_grad=self.num, max_slew=self.num), opt)
 
 if __name__ == '__main__':
     ut.main()
