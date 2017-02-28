@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-public-methods
+# pylint: disable=invalid-name
+# pylint: disable=missing-docstring
 """
 Unit tests for the functionality in the mr toolbox
 
@@ -6,7 +9,7 @@ Unit tests for the functionality in the mr toolbox
 """
 
 import unittest as ut
-from mr import convert, opts
+from mr import convert, opts, inside_limits, traj2grad
 from random import random
 import numpy as np
 
@@ -318,6 +321,73 @@ class TestOpts(ut.TestCase):
                'grad_raster_time': 10e-6}
         self.assertEqual(opts(slew_unit='A/s', grad_unit='A',
                               max_grad=self.num, max_slew=self.num), opt)
+
+
+class TestInsideLimits(ut.TestCase):
+    """Test inside_limits functionality
+
+    Tests inside_limits() function of mr.py
+
+    Author: Stefan Kroboth <stefan.kroboth@uniklinik-freiburg.de>
+    """
+    def test_both_inside_limits(self):
+        self.assertTrue(inside_limits([0, 0.2], [0, -0.3], 1, 1))
+
+    def test_grad_outside_limits(self):
+        self.assertFalse(inside_limits([0, 4], [0, 0.2], 1, 7))
+
+    def test_slew_outside_limits(self):
+        self.assertFalse(inside_limits([0, 0.4], [6, 0.2], 3, 1))
+
+    def test_both_outside_limits(self):
+        self.assertFalse(inside_limits([8, 7.2], [2, -9.3], 4, 3.5))
+
+
+class TestTraj2Grad(ut.TestCase):
+    """Test trajectory to gradient conversion functionality
+
+    Tests traj2grad() function of mr.py
+    TODO: more sophisticated tests may be necessary!
+
+    Author: Stefan Kroboth <stefan.kroboth@uniklinik-freiburg.de>
+    """
+    def __init__(self, *args, **kwargs):
+        super(TestTraj2Grad, self).__init__(*args, **kwargs)
+
+    def test_basic_traj(self):
+        traj = np.array([[0, 1], [1, 0]], dtype=np.float64)
+        grad_raster_time = 10e-6
+        self.assertTrue((traj2grad(traj) ==
+                         np.array([[1, 0], [-1, 0]])/grad_raster_time).all())
+
+    def test_grad_raster_time_provided(self):
+        traj = np.array([[0, 1], [1, 0]], dtype=np.float64)
+        grad_raster_time = 1e-6
+        self.assertTrue((traj2grad(traj, grad_raster_time=grad_raster_time) ==
+                         np.array([[1, 0], [-1, 0]])/grad_raster_time).all())
+
+    def test_sys_provided(self):
+        traj = np.array([[0, 1], [1, 0]], dtype=np.float64)
+        grad_raster_time = 10e-6
+        sys = opts()
+        self.assertTrue((traj2grad(traj, system=sys) ==
+                         np.array([[1, 0], [-1, 0]])/grad_raster_time).all())
+
+    def test_modified_sys_provided(self):
+        traj = np.array([[0, 1], [1, 0]], dtype=np.float64)
+        grad_raster_time = 1e-3
+        sys = opts(grad_raster_time=1e-3)
+        self.assertTrue((traj2grad(traj, system=sys) ==
+                         np.array([[1, 0], [-1, 0]])/grad_raster_time).all())
+
+    def test_modified_sys_and_grad_raster_time_provided(self):
+        traj = np.array([[0, 1], [1, 0]], dtype=np.float64)
+        grad_raster_time = 1e-4
+        sys = opts(grad_raster_time=1e-3)
+        self.assertTrue((traj2grad(traj, system=sys,
+                                   grad_raster_time=grad_raster_time) ==
+                         np.array([[1, 0], [-1, 0]])/grad_raster_time).all())
+
 
 if __name__ == '__main__':
     ut.main()

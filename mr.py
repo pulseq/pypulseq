@@ -477,16 +477,22 @@ def traj2grad(k, system=None, grad_raster_time=None):
     differences. The trajectory is in units of 1/m.
     The size of k is [n_channels, nTime].
 
-    g = traj2grad(k, rasterTime=T) : Calculate gradient waveforms
-    assuming the given raster time.
+    g = traj2grad(k, rasterTime=T): Calculate gradient waveforms assuming the
+    given raster time.
 
     See also Sequence.make_arbitrary_grad
     """
 
     if system is None:
-        system = opts()
+        sys = opts()
+    else:
+        sys = system
+
     if grad_raster_time is None:
-        grad_raster_time = system['grad_raster_time']
+        grad_raster_time = sys['grad_raster_time']
+    elif grad_raster_time != sys['grad_raster_time'] and system is not None:
+        warnings.warn('Provided grad_raster_time differs from provided system \
+                      options.')
 
     # Special case when k is a vector
     is_vec = k.ndim == 1
