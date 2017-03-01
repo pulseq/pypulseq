@@ -556,7 +556,7 @@ def make_arbitrary_rf(signal, flip_angle, system=None, freq_offset=0,
         # Round to mu s
         t_fill = np.arange(1, np.round(system['rf_ringdown_time']/1e-6))*1e-6
         t = np.concatenate((t, t[-1]+t_fill))
-        signal = np.concatenate((signal, np.seros(t_fill.shape)))
+        signal = np.concatenate((signal, np.zeros(t_fill.shape)))
 
     return RFPulse('rf', signal, t, freq_offset, phase_offset,
                    system['rf_dead_time'], system['rf_ringdown_time'], gz)

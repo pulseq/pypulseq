@@ -9,7 +9,8 @@ Unit tests for the functionality in the mr toolbox
 """
 
 import unittest as ut
-from mr import convert, opts, inside_limits, traj2grad
+from mr import convert, opts, inside_limits, traj2grad, make_arbitrary_rf
+from mr import RFPulse, Gradient, ADC, Delay
 from random import random
 import numpy as np
 
@@ -177,6 +178,17 @@ class TestConvert(ut.TestCase):
 
     def test_A_over_s_to_A_over_s(self):
         self.assertEqual(convert(self.num, 'A/s', 'A/s'), self.num)
+
+
+class TestRamps(ut.TestCase):
+    """Test add_ramp(), calc_ramp(),...
+
+    TODO: implement
+
+    Author: Stefan Kroboth <stefan.kroboth@uniklinik-freiburg.de>
+    """
+    def __init__(self, *args, **kwargs):
+        super(TestRamps, self).__init__(*args, **kwargs)
 
 
 class TestOpts(ut.TestCase):
@@ -351,9 +363,6 @@ class TestTraj2Grad(ut.TestCase):
 
     Author: Stefan Kroboth <stefan.kroboth@uniklinik-freiburg.de>
     """
-    def __init__(self, *args, **kwargs):
-        super(TestTraj2Grad, self).__init__(*args, **kwargs)
-
     def test_basic_traj(self):
         traj = np.array([[0, 1], [1, 0]], dtype=np.float64)
         grad_raster_time = 10e-6
@@ -387,6 +396,133 @@ class TestTraj2Grad(ut.TestCase):
         self.assertTrue((traj2grad(traj, system=sys,
                                    grad_raster_time=grad_raster_time) ==
                          np.array([[1, 0], [-1, 0]])/grad_raster_time).all())
+
+
+class TestMakeArbitraryRF(ut.TestCase):
+    """Test make_arbitrary_rf()
+
+    TODO: more sophisticated tests may be necessary!
+    TODO: test with rf_ringdown_time
+    TODO: test with bandwith
+    TODO: test with slice_thickness
+    TODO: test with time_bw_product
+
+    Author: Stefan Kroboth <stefan.kroboth@uniklinik-freiburg.de>
+    """
+    def __init__(self, *args, **kwargs):
+        super(TestMakeArbitraryRF, self).__init__(*args, **kwargs)
+        self.N = 1024
+        self.signal = np.random.rand(self.N)
+
+    def test_basic_freq_and_phase_provided(self):
+        system = opts()
+        t = np.arange(1, self.N+1)*system['rf_raster_time']
+        freq_offset = abs(random())
+        phase_offset = abs(random())
+        flip_angle = abs(random())
+        signal = self.signal / np.sum(self.signal * system['rf_raster_time'])\
+            * flip_angle / (2*np.pi)
+        gz = None
+        rfp = RFPulse('rf', signal, t, freq_offset, phase_offset,
+                      system['rf_dead_time'], system['rf_ringdown_time'], gz)
+        rf = make_arbitrary_rf(self.signal, flip_angle,
+                               freq_offset=freq_offset,
+                               phase_offset=phase_offset)
+        self.assertTrue((rf.signal == rfp.signal).all())
+        self.assertTrue((rf.t == rfp.t).all())
+        self.assertTrue(rf.freq_offset == rfp.freq_offset)
+        self.assertTrue(rf.phase_offset == rfp.phase_offset)
+        self.assertTrue(rf.dead_time == rfp.dead_time)
+        self.assertTrue(rf.ringdown_time == rfp.ringdown_time)
+        self.assertTrue(rf.gz == rfp.gz)
+
+
+class TestMakeSincPulse(ut.TestCase):
+    """Test make_sinc_pulse()
+
+    TODO: implement
+
+    Author: Stefan Kroboth <stefan.kroboth@uniklinik-freiburg.de>
+    """
+    def __init__(self, *args, **kwargs):
+        super(TestMakeSincPulse, self).__init__(*args, **kwargs)
+
+
+class TestMakeTrapezoid(ut.TestCase):
+    """Test make_trapezoid()
+
+    TODO: implement
+
+    Author: Stefan Kroboth <stefan.kroboth@uniklinik-freiburg.de>
+    """
+    def __init__(self, *args, **kwargs):
+        super(TestMakeTrapezoid, self).__init__(*args, **kwargs)
+
+
+class TestMakeArbitraryGrad(ut.TestCase):
+    """Test make_arbitrary_grad()
+
+    TODO: implement
+
+    Author: Stefan Kroboth <stefan.kroboth@uniklinik-freiburg.de>
+    """
+    def __init__(self, *args, **kwargs):
+        super(TestMakeArbitraryGrad, self).__init__(*args, **kwargs)
+
+
+class TestMakeADC(ut.TestCase):
+    """Test make_adc()
+
+    TODO: implement
+
+    Author: Stefan Kroboth <stefan.kroboth@uniklinik-freiburg.de>
+    """
+    def __init__(self, *args, **kwargs):
+        super(TestMakeADC, self).__init__(*args, **kwargs)
+
+
+class TestMakeBlockPulse(ut.TestCase):
+    """Test make_block_pulse()
+
+    TODO: implement
+
+    Author: Stefan Kroboth <stefan.kroboth@uniklinik-freiburg.de>
+    """
+    def __init__(self, *args, **kwargs):
+        super(TestMakeBlockPulse, self).__init__(*args, **kwargs)
+
+
+class TestCalcDuration(ut.TestCase):
+    """Test calc_duration()
+
+    TODO: implement
+
+    Author: Stefan Kroboth <stefan.kroboth@uniklinik-freiburg.de>
+    """
+    def __init__(self, *args, **kwargs):
+        super(TestCalcDuration, self).__init__(*args, **kwargs)
+
+
+class TestCompressShape(ut.TestCase):
+    """Test compress_shape()
+
+    TODO: implement
+
+    Author: Stefan Kroboth <stefan.kroboth@uniklinik-freiburg.de>
+    """
+    def __init__(self, *args, **kwargs):
+        super(TestCompressShape, self).__init__(*args, **kwargs)
+
+
+class TestMakeDelay(ut.TestCase):
+    """Test make_delay()
+
+    TODO: implement
+
+    Author: Stefan Kroboth <stefan.kroboth@uniklinik-freiburg.de>
+    """
+    def __init__(self, *args, **kwargs):
+        super(TestMakeDelay, self).__init__(*args, **kwargs)
 
 
 if __name__ == '__main__':
