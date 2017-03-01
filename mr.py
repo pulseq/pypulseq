@@ -941,6 +941,6 @@ def make_delay(delay):
     """
 
     if (not np.isfinite(delay)) or (delay <= 0):
-        raise Exception('Delay (' + str(delay*1e3) + 'ms) is invalid.')
+        raise ValueError('Delay (' + str(delay*1e3) + 'ms) is invalid.')
 
     return Delay('delay', delay)  # delay, delay, delaaaayyy :D

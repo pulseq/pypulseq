@@ -10,6 +10,7 @@ Unit tests for the functionality in the mr toolbox
 
 import unittest as ut
 from mr import convert, opts, inside_limits, traj2grad, make_arbitrary_rf
+from mr import make_delay
 from mr import RFPulse, Gradient, ADC, Delay
 from random import random
 import numpy as np
@@ -342,7 +343,7 @@ class TestInsideLimits(ut.TestCase):
 
     Author: Stefan Kroboth <stefan.kroboth@uniklinik-freiburg.de>
     """
-    def test_both_inside_limits(self):
+    def test_grad_and_slew_inside_limits(self):
         self.assertTrue(inside_limits([0, 0.2], [0, -0.3], 1, 1))
 
     def test_grad_outside_limits(self):
@@ -351,7 +352,7 @@ class TestInsideLimits(ut.TestCase):
     def test_slew_outside_limits(self):
         self.assertFalse(inside_limits([0, 0.4], [6, 0.2], 3, 1))
 
-    def test_both_outside_limits(self):
+    def test_grad_and_slew_outside_limits(self):
         self.assertFalse(inside_limits([8, 7.2], [2, -9.3], 4, 3.5))
 
 
@@ -517,12 +518,29 @@ class TestCompressShape(ut.TestCase):
 class TestMakeDelay(ut.TestCase):
     """Test make_delay()
 
-    TODO: implement
-
     Author: Stefan Kroboth <stefan.kroboth@uniklinik-freiburg.de>
     """
     def __init__(self, *args, **kwargs):
         super(TestMakeDelay, self).__init__(*args, **kwargs)
+        self.num = abs(random())
+
+    def test_type(self):
+        self.assertIsInstance(make_delay(self.num),  Delay)
+
+    def test_basic(self):
+        self.assertEqual(make_delay(self.num).delay,  self.num)
+
+    def test_negative_delay(self):
+        self.assertRaises(ValueError, make_delay, -self.num)
+
+    def test_infinite_delay(self):
+        self.assertRaises(ValueError, make_delay, np.inf)
+
+    def test_nan_delay(self):
+        self.assertRaises(ValueError, make_delay, np.nan)
+
+    def test_zero_delay(self):
+        self.assertRaises(ValueError, make_delay, 0)
 
 
 if __name__ == '__main__':
