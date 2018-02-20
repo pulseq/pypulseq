@@ -4,6 +4,8 @@
 </a>
 </div>
 
+*DEPRECATED!* Please have a look at [pulseq-gpi](https://github.com/sravan953/pulseq-gpi) instead.
+
 # Introduction
 
 *pyPulseq* is an open source framework for the development, 
