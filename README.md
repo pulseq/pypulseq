@@ -4,7 +4,7 @@
 </a>
 </div>
 
-*DEPRECATED!* Please have a look at [pulseq-gpi](https://github.com/sravan953/pulseq-gpi) instead.
+*DEPRECATED!* Please have a look at [the other pypulseq](https://github.com/imr-framework/pypulseq) instead.
 
 # Introduction
 
