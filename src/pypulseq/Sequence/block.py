@@ -164,6 +164,14 @@ def set_block(self, block_index: int, *args: SimpleNamespace | float) -> None:
                 duration = max(duration, event.default_duration)
                 ext = {'type': self.get_extension_type_ID('DELAYS'), 'ref': event_id}
                 extensions.append(ext)
+            elif event.type == 'rf_shim':
+                if hasattr(event, 'id'):
+                    event_id = event.id
+                else:
+                    event_id = register_rf_shim_event(self, event)
+
+                ext = {'type': self.get_extension_type_ID('RF_SHIMS'), 'ref': event_id}
+                extensions.append(ext)
             else:
                 raise ValueError(f'Unknown event type {event.type} passed to set_block().')
         else:
@@ -762,6 +770,27 @@ def register_soft_delay_event(self, event: SimpleNamespace) -> int:
     if self.use_block_cache and found:
         self.block_cache.clear()
     return soft_delay_id
+
+
+def register_rf_shim_event(self, event: SimpleNamespace) -> int:
+    """
+    Parameters
+    ----------
+    event : SimpleNamespace
+        RF shim event to be registered.
+
+    Returns
+    -------
+    int
+        ID of registered RF shim event.
+    """
+    # Interleave magnitudes and phases: (magn_c1, phase_c1, magn_c2, phase_c2, ...)
+    data = np.stack((np.abs(event.shim_vector), np.angle(event.shim_vector)), axis=-1).ravel()
+    data = tuple(data.tolist())
+    rf_shim_id, found = self.rf_shim_library.find_or_insert(new_data=data)
+    if self.use_block_cache and found:
+        self.block_cache.clear()
+    return rf_shim_id
 
 
 def register_rf_event(self, event: SimpleNamespace) -> tuple[int, list[int]]:
