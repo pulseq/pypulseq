@@ -49,6 +49,7 @@ def read(self, path: str, detect_rf_use: Union[bool, None] = None, remove_duplic
     self.grad_library = EventLibrary()
     self.label_inc_library = EventLibrary()
     self.label_set_library = EventLibrary()
+    self.loop_library = EventLibrary()
     self.rf_library = EventLibrary()
     self.shape_library = EventLibrary()
     self.trigger_library = EventLibrary()
@@ -224,6 +225,10 @@ def read(self, path: str, detect_rf_use: Union[bool, None] = None, remove_duplic
                 for d in self.soft_delay_library.data.values():
                     if d[3] not in self.soft_delay_hints:
                         self.soft_delay_hints[d[3]] = d[0]
+            elif section[:15] == 'extension LOOPS':
+                extension_id = int(section[15:])
+                self.set_extension_string_ID('LOOPS', extension_id)
+                self.loop_library = __read_and_parse_events(input_file, int, int)
             else:
                 raise ValueError(f'Unknown section code: {section}')
 
