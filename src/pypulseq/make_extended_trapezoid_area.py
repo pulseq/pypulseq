@@ -87,7 +87,7 @@ def make_extended_trapezoid_area(
     def _calc_ramp_time(grad_1: float, grad_2: float) -> float:
         return _to_raster(abs(grad_1 - grad_2) / max_slew)
 
-    def _find_solution(duration: int) -> Union[None, Tuple[int, int, int, float]]:
+    def _find_solution(duration: int) -> Union[Tuple[int, int, int, float], None]:
         """Find extended trapezoid gradient waveform for given duration.
 
         The function performs a grid search over all possible ramp-up, ramp-down and flat times
