@@ -55,7 +55,7 @@ def split_gradient_at(
 
     time_index = round(time_point / grad_raster_time)
     # Work around floating-point arithmetic limitation
-    time_point = round(time_index * grad_raster_time, 6)
+    time_point = round(time_index * grad_raster_time, 7)
     channel = grad.channel
 
     if grad.type == 'grad':
@@ -122,7 +122,7 @@ def split_gradient_at(
         time_point -= grad.delay
 
     amplitudes = np.array(amplitudes)
-    times = np.array(times).round(6)  # Work around floating-point arithmetic limitation
+    times = np.array(times).round(7)  # Work around floating-point arithmetic limitation
 
     # Sample at time point
     amp_tp = np.interp(x=time_point, xp=times, fp=amplitudes)
