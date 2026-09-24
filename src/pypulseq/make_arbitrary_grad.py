@@ -93,7 +93,7 @@ def make_arbitrary_grad(
 
     # Slew rate calculation
     if oversampling:
-        edge_scale = system.grad_raster_time * 2
+        edge_scale = system.grad_raster_time / 2
         pre = first - waveform[0]
         post = last - waveform[-1]
     else:
