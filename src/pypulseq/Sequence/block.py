@@ -425,7 +425,7 @@ def get_block(self, block_index: int) -> SimpleNamespace:
                         )
                     if len(grad.waveform) % 2 != 1:
                         raise ValueError('Oversampled gradient waveforms must have odd number of samples')
-                    t_end = (len(g) + 1) * self.grad_raster_time
+                    t_end = (len(g) + 1) * 0.5 * self.grad_raster_time
                     grad.area = sum(grad.waveform[::2]) * self.grad_raster_time  # remove oversampling
                 else:
                     t_shape_data = self.shape_library.data[time_id]
