@@ -49,7 +49,7 @@ def write(self, file_name: Union[str, Path], create_signature, remove_duplicates
     if remove_duplicates:
         self = self.remove_duplicates()
 
-    with open(file_name, 'w') as output_file:
+    with open(file_name, 'w', newline='\n') as output_file:
         output_file.write('# Pulseq sequence file\n')
         output_file.write('# Created by PyPulseq\n\n')
 
@@ -261,7 +261,7 @@ def write(self, file_name: Union[str, Path], create_signature, remove_duplicates
             md5 = hashlib.md5(buffer).hexdigest()
 
         # Write signature
-        with open(file_name, 'a') as output_file:
+        with open(file_name, 'a', newline='\n') as output_file:
             output_file.write('\n[SIGNATURE]\n')
             output_file.write(
                 '# This is the hash of the Pulseq file, calculated right before the [SIGNATURE] section was added\n'
@@ -317,7 +317,7 @@ def write_v141(self, file_name: Union[str, Path], create_signature, remove_dupli
     if remove_duplicates:
         self = self.remove_duplicates()
 
-    with open(file_name, 'w') as output_file:
+    with open(file_name, 'w', newline='\n') as output_file:
         output_file.write('# Pulseq sequence file\n')
         output_file.write('# Created by PyPulseq\n\n')
 
@@ -521,7 +521,7 @@ def write_v141(self, file_name: Union[str, Path], create_signature, remove_dupli
             md5 = hashlib.md5(buffer).hexdigest()
 
         # Write signature
-        with open(file_name, 'a') as output_file:
+        with open(file_name, 'a', newline='\n') as output_file:
             output_file.write('\n[SIGNATURE]\n')
             output_file.write(
                 '# This is the hash of the Pulseq file, calculated right before the [SIGNATURE] section was added\n'
