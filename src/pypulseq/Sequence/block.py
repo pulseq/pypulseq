@@ -154,6 +154,14 @@ def set_block(self, block_index: int, *args: Union[SimpleNamespace, float]) -> N
                     'ref': label_id,
                 }
                 extensions.append(ext)
+            elif event.type == 'loop':
+                if hasattr(event, 'id'):
+                    event_id = event.id
+                else:
+                    event_id = register_loop_event(self, event)
+
+                ext = {'type': self.get_extension_type_ID('LOOPS'), 'ref': event_id}
+                extensions.append(ext)
             elif event.type == 'soft_delay':
                 if hasattr(event, 'id'):
                     event_id = event.id
@@ -546,6 +554,13 @@ def get_block(self, block_index: int) -> SimpleNamespace:
                     hint=data[3],
                     default_duration=self.block_durations[block_index],
                 )
+            elif ext_type == 'LOOPS':
+                data = self.loop_library.data[ext_data[1]]
+                loop_event = SimpleNamespace(type='loop', loop_id=data[0], on_off=data[1])
+                if hasattr(block, 'loop'):
+                    block.loop[len(block.loop)] = loop_event
+                else:
+                    block.loop = {0: loop_event}
 
             else:
                 raise RuntimeError(f'Unknown extension ID {ext_data[0]}')
@@ -555,6 +570,8 @@ def get_block(self, block_index: int) -> SimpleNamespace:
     # Reverse the order of labels, because extensions are saved as a reversed linked list
     if block.label is not None:
         block.label = dict(enumerate(reversed(block.label.values())))
+    if hasattr(block, 'loop') and block.loop is not None:
+        block.loop = dict(enumerate(reversed(block.loop.values())))
 
     block.block_duration = self.block_durations[block_index]
 
@@ -770,6 +787,27 @@ def register_label_event(self, event: SimpleNamespace) -> int:
         self.block_cache.clear()
 
     return label_id
+
+
+def register_loop_event(self, event: SimpleNamespace) -> int:
+    """
+    Parameters
+    ----------
+    event : SimpleNamespace
+        Loop event to be registered.
+
+    Returns
+    -------
+    int
+        ID of registered loop event.
+    """
+    data = (event.loop_id, event.on_off)
+    loop_id, found = self.loop_library.find_or_insert(new_data=data)
+
+    if self.use_block_cache and found:
+        self.block_cache.clear()
+
+    return loop_id
 
 
 def register_soft_delay_event(self, event: SimpleNamespace) -> int:

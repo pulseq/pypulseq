@@ -253,6 +253,22 @@ def seq6():
     return seq
 
 
+def test_loop_extension_round_trip(tmp_path):
+    seq = Sequence()
+    seq.add_block(pp.make_loop(loop_id=7, on_off=1))
+
+    output_file = tmp_path / 'loop.seq'
+    seq.write(output_file, create_signature=False)
+
+    reloaded_seq = Sequence()
+    reloaded_seq.read(output_file)
+    block = reloaded_seq.get_block(1)
+
+    assert block.loop[0].type == 'loop'
+    assert block.loop[0].loop_id == 7
+    assert block.loop[0].on_off == 1
+
+
 # Dummy seq ending with [TRAP] section
 def seq_trap_only():
     seq = Sequence()
