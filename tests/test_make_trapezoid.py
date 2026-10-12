@@ -133,6 +133,12 @@ def test_generation_methods():
 
 
 def test_area_duration_matches_matlab_make_trapezoid_reference():
+    """
+    Ensure PyPulseq generates the same trapezoid as MATLAB when defining area and duration.
+
+    Reference values were created using the MATLAB make_trapezoid function with the same system settings
+    and the same parameters (area=250, duration=1e-3) in October 2026.
+    """
     system = Opts(max_grad=100, grad_unit='mT/m', max_slew=100, slew_unit='T/m/s')
 
     trap = make_trapezoid(channel='x', area=250, duration=1e-3, system=system)
