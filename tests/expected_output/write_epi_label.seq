@@ -5673,11 +5673,11 @@ TotalDuration 4.32868
 # ..      Hz/m   us   us   us    us
 [TRAP]
  1       444444  90 3000  90  10
- 2      -460423 220  360 220   0
- 3 -1.24848e+06 250  300 250   0
+ 2      -365816  70  660  70   0
+ 3 -1.18391e+06 220  360 220   0
  4  1.13636e+06 210  260 210   0
  5 -1.13636e+06 210  260 210   0
- 6       230880 170  460 170   0
+ 6       191388  40  720  40   0
  7      -151515  30    0  30   0
  8  1.35307e+06 250  610 250   0
 
@@ -8765,4 +8765,4 @@ num_samples 3000
 # It can be reproduced/verified with md5sum if the file trimmed to the position right above [SIGNATURE]
 # The new line character preceding [SIGNATURE] BELONGS to the signature (and needs to be stripped away for recalculating/verification)
 Type md5
-Hash e541f4fd902ffefd4b5c356ae648eaf3
+Hash 52f9f43be7399383c6a682b94f9618b0
