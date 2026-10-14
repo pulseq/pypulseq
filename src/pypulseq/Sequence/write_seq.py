@@ -49,7 +49,7 @@ def write(self, file_name: Union[str, Path], create_signature, remove_duplicates
     if remove_duplicates:
         self = self.remove_duplicates()
 
-    with open(file_name, 'w') as output_file:
+    with open(file_name, 'w', newline='\n') as output_file:
         output_file.write('# Pulseq sequence file\n')
         output_file.write('# Created by PyPulseq\n\n')
 
@@ -108,7 +108,7 @@ def write(self, file_name: Union[str, Path], create_signature, remove_duplicates
             output_file.write(f'# Field "use" is the initial of: {" ".join(get_supported_rf_uses()).strip()}\n')
             output_file.write('[RF]\n')
             id_format_str = (
-                '{:.0f} {:12g} {:.0f} {:.0f} {:.0f} {:g} {:g} {:g} {:g} {:g} {:g} {:s}\n'  # Refer lines 20-21
+                '{:.0f} {:12g} {:.0f} {:.0f} {:.0f} {:g} {:.0f} {:g} {:g} {:g} {:g} {:s}\n'  # Refer lines 20-21
             )
             for k in self.rf_library.data:
                 lib_data1 = self.rf_library.data[k][0:4]
@@ -261,7 +261,7 @@ def write(self, file_name: Union[str, Path], create_signature, remove_duplicates
             md5 = hashlib.md5(buffer).hexdigest()
 
         # Write signature
-        with open(file_name, 'a') as output_file:
+        with open(file_name, 'a', newline='\n') as output_file:
             output_file.write('\n[SIGNATURE]\n')
             output_file.write(
                 '# This is the hash of the Pulseq file, calculated right before the [SIGNATURE] section was added\n'
@@ -317,7 +317,7 @@ def write_v141(self, file_name: Union[str, Path], create_signature, remove_dupli
     if remove_duplicates:
         self = self.remove_duplicates()
 
-    with open(file_name, 'w') as output_file:
+    with open(file_name, 'w', newline='\n') as output_file:
         output_file.write('# Pulseq sequence file\n')
         output_file.write('# Created by PyPulseq\n\n')
 
@@ -376,7 +376,7 @@ def write_v141(self, file_name: Union[str, Path], create_signature, remove_dupli
             output_file.write('# id amplitude mag_id phase_id time_shape_id delay freq phase\n')
             output_file.write('# ..        Hz   ....     ....          ....    us   Hz   rad\n')
             output_file.write('[RF]\n')
-            id_format_str = '{:.0f} {:12g} {:.0f} {:.0f} {:.0f} {:g} {:g} {:g}\n'  # Refer lines 20-21
+            id_format_str = '{:.0f} {:12g} {:.0f} {:.0f} {:.0f} {:.0f} {:g} {:g}\n'  # Refer lines 20-21
             for k in self.rf_library.data:
                 lib = self.rf_library.data[k]
                 data1 = lib[0:4]
@@ -521,7 +521,7 @@ def write_v141(self, file_name: Union[str, Path], create_signature, remove_dupli
             md5 = hashlib.md5(buffer).hexdigest()
 
         # Write signature
-        with open(file_name, 'a') as output_file:
+        with open(file_name, 'a', newline='\n') as output_file:
             output_file.write('\n[SIGNATURE]\n')
             output_file.write(
                 '# This is the hash of the Pulseq file, calculated right before the [SIGNATURE] section was added\n'
