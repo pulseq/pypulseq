@@ -191,6 +191,38 @@ def test_gradient_continuity_setblock7():
     assert list(seq.block_events.keys()) == [10, 5, 7]
 
 
+def test_gradient_continuity_setblock8():
+    # Overwrite the last block with a gradient that ends high: No error expected (same as add_block, see continuity10)
+    seq = pp.Sequence()
+    seq.add_block(gx_trap)
+    seq.add_block(gx_trap)
+    seq.set_block(2, gx_endshigh)
+
+
+def test_gradient_continuity_setblock9():
+    # Overwrite a middle block with a gradient that connects on both sides: No error expected
+    seq = pp.Sequence()
+    seq.add_block(gx_endshigh)
+    seq.add_block(gx_allhigh)
+    seq.add_block(gx_startshigh)
+    seq.set_block(2, gx_allhigh)
+
+    # Continue appending afterwards: block 3 ends at zero, so a trapezoid is fine ...
+    seq.add_block(gx_trap)
+
+    # Overwriting block 3 with a gradient that ends high is not allowed, because block 4 starts at zero
+    with pytest.raises(RuntimeError):
+        seq.set_block(3, gx_allhigh)
+
+
+def test_gradient_continuity_zero_duration_block():
+    # Gradient ends high and is followed by a block of zero duration (label only): must raise like continuity7
+    with pytest.raises(RuntimeError):
+        seq = pp.Sequence()
+        seq.add_block(gx_endshigh)
+        seq.add_block(pp.make_label(label='LIN', type='SET', value=1))  # raises
+
+
 def test_get_block_oversampled_grad():
     # get_block returns the oversampled gradient that was added, with the same timing
     seq = pp.Sequence()
