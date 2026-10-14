@@ -277,6 +277,20 @@ def seq_ext_only():
     return seq
 
 
+# Dummy seq with oversampled arbitrary gradients (time shape ID -1), two of which are identical after rounding
+def seq_oversampled_grad():
+    seq = Sequence()
+    waveform = 10000 * np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 2, 1])
+    seq.add_block(pp.make_arbitrary_grad('x', waveform, first=0, last=0, oversampling=True))
+    seq.add_block(pp.make_arbitrary_grad('x', waveform * 1.0000001, first=0, last=0, oversampling=True))
+    seq.add_block(
+        pp.make_arbitrary_grad('y', -waveform, first=0, last=0, oversampling=True),
+        pp.make_arbitrary_grad('z', waveform, first=0, last=0, oversampling=True),
+    )
+
+    return seq
+
+
 # List of all sequence functions that will be tested with the test functions below.
 sequence_zoo = [
     seq_make_gauss_pulses,
@@ -291,6 +305,7 @@ sequence_zoo = [
     seq_trap_only,
     seq_adc_only,
     seq_ext_only,
+    seq_oversampled_grad,
 ]
 
 
@@ -332,6 +347,27 @@ def make_test_func(example):
 
 for example in seq_examples:
     sequence_zoo.append(make_test_func(example))
+
+
+def test_remove_duplicates_oversampled_grad():
+    seq = seq_oversampled_grad()
+    seq_dedup = seq.remove_duplicates()
+
+    # The oversampling sentinel time_id = -1 is not a shape library ID and must survive deduplication
+    for grad_id, data in seq_dedup.grad_library.data.items():
+        if seq_dedup.grad_library.type[grad_id] == 'g':
+            assert data[4] == -1
+
+    # Blocks 1 and 2 differ only in the 7th digit of the amplitude and must be merged into one gradient event
+    assert seq.block_events[1][2] != seq.block_events[2][2]
+    assert seq_dedup.block_events[1][2] == seq_dedup.block_events[2][2]
+    assert len(seq_dedup.grad_library.data) == len(seq.grad_library.data) - 1
+
+    # Deduplicated gradients keep their timing
+    gx = seq_dedup.get_block(1).gx
+    assert gx.shape_dur == pytest.approx(seq.get_block(1).gx.shape_dur)
+    ok, errors = seq_dedup.check_timing()
+    assert ok, errors
 
 
 # Main Sequence test class
@@ -511,7 +547,8 @@ class TestSequence:
         assert len(seq2.block_events) == len(seq.block_events)
 
     def test_writeread_v141(self, seq_func, tmp_path):
-        if seq_func.__name__ not in ['seq6', 'write_gre_label_softdelay']:  # soft delay not supported in v141
+        # soft delays (seq6, write_gre_label_softdelay) and oversampled gradients (seq_oversampled_grad) are not supported in v141
+        if seq_func.__name__ not in ['seq6', 'write_gre_label_softdelay', 'seq_oversampled_grad']:
             seq_name = str(seq_func.__name__)
             output_filename = tmp_path / (seq_name + '.seq')
 
