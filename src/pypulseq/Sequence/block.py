@@ -394,7 +394,7 @@ def get_block(self, block_index: int, add_IDs: bool = False) -> SimpleNamespace:
 
     # RF
     if raw_block.rf:  # RF
-        if len(self.rf_library.type) >= raw_block.rf:
+        if raw_block.rf in self.rf_library.type:
             block.rf = self.rf_from_lib_data(self.rf_library.data[raw_block.rf], self.rf_library.type[raw_block.rf])
         else:
             block.rf = self.rf_from_lib_data(self.rf_library.data[raw_block.rf], 'u')  # Undefined type/use

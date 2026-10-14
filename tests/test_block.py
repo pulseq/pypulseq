@@ -223,6 +223,13 @@ def test_gradient_continuity_zero_duration_block():
         seq.add_block(pp.make_label(label='LIN', type='SET', value=1))  # raises
 
 
+def test_gradient_continuity_first_block_noncontiguous():
+    # First block of an empty sequence starts high, even with non-contiguous numbering: must raise
+    with pytest.raises(RuntimeError):
+        seq = pp.Sequence()
+        seq.set_block(10, gx_startshigh)
+
+
 def test_get_block_oversampled_grad():
     # get_block returns the oversampled gradient that was added, with the same timing
     seq = pp.Sequence()
