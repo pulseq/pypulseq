@@ -135,14 +135,11 @@ def test_sequence_sliding_window(dummy_rf, dummy_sequence):
     Test sliding window RF power calculation.
 
     NOTE:
-    The sliding window implementation intentionally follows Pulseq's
-    MATLAB behavior, where the accumulated energy is compared against
-    the maximum *before* trimming the window back to the nominal
-    window_duration.
+    The sliding window implementation intentionally follows Pulseq's MATLAB behavior, where the accumulated energy is
+    compared against the maximum *before* trimming the window back to the nominal window_duration.
 
-    This leads to a conservative (slightly overestimated) mean power,
-    as explicitly documented in the original Pulseq code and consistent
-    with SAR-style worst-case windowing.
+    This leads to a conservative (slightly overestimated) mean power, as explicitly documented in the original Pulseq
+    code and consistent with SAR-style worst-case windowing.
     """
     seq = dummy_sequence
 
@@ -170,3 +167,185 @@ def test_sequence_sliding_window(dummy_rf, dummy_sequence):
 
     # Peak power is taken from the strongest RF block
     assert np.isclose(peak, 9.0)
+
+
+def test_native_integration_dt_none(dummy_rf):
+    """Test the dt=None path, which integrates the native rf.t samples."""
+    A = 2.0
+    T = 4.0e-3
+    rf = dummy_rf(amplitude=A, duration=T)
+
+    E, P, rms = pp.calc_rf_power(rf, dt=None)
+
+    assert np.isclose(E, A**2 * T)
+    assert np.isclose(P, A**2)
+    assert np.isclose(rms, A)
+
+
+def test_block_pulse_energy():
+    """Block pulse energy against analytic solution (cf. MATLAB testCalcRfPower)."""
+    duration = 1e-3
+    rf = pp.make_block_pulse(flip_angle=np.pi / 2, duration=duration)
+    amp = np.max(np.abs(rf.signal))
+
+    total_energy, peak_pwr, rf_rms = pp.calc_rf_power(rf)
+
+    assert np.isclose(total_energy, amp**2 * duration, rtol=0.02)
+    assert np.isclose(peak_pwr, amp**2, rtol=0.02)
+    assert np.isclose(rf_rms, amp, rtol=0.02)
+
+
+def test_rms_relation_sinc():
+    """rf_rms must equal sqrt(total_energy / shape_dur) (cf. MATLAB testCalcRfPower)."""
+    rf = pp.make_sinc_pulse(flip_angle=np.pi / 2, duration=4e-3, time_bw_product=4)
+
+    total_energy, _, rf_rms = pp.calc_rf_power(rf)
+
+    assert np.isclose(rf_rms, np.sqrt(total_energy / rf.shape_dur), rtol=1e-6)
+
+
+def test_dt_consistency():
+    """Different dt values give consistent energy (cf. MATLAB testCalcRfPower)."""
+    rf = pp.make_block_pulse(flip_angle=np.pi / 2, duration=1e-3)
+
+    e1, _, _ = pp.calc_rf_power(rf, dt=1e-6)
+    e2, _, _ = pp.calc_rf_power(rf, dt=0.5e-6)
+    e3, _, _ = pp.calc_rf_power(rf, dt=None)
+
+    assert np.isclose(e1, e2, rtol=0.02)
+    assert np.isclose(e1, e3, rtol=0.02)
+
+
+def test_sequence_window_with_delay_blocks(dummy_rf, dummy_sequence):
+    """Sliding window must slide correctly past blocks without RF events."""
+    seq = dummy_sequence
+    A = 2.0
+    T = 1.0e-3
+    rf = dummy_rf(amplitude=A, duration=T)
+
+    seq.add_block(rf)
+    seq.add_block(pp.make_delay(10e-3))
+
+    mean_pwr, peak, rms, energy = seq.calc_rf_power(window_duration=5e-3)
+
+    # The largest window contains only the RF block:
+    # energy = A**2 * T, averaged over the nominal window duration
+    assert np.isclose(energy, A**2 * T)
+    assert np.isclose(mean_pwr, A**2 * T / 5e-3)
+    assert np.isclose(rms, np.sqrt(A**2 * T / 5e-3))
+    assert np.isclose(peak, A**2)
+
+
+def test_sequence_window_multiple_rf_and_delays(dummy_rf, dummy_sequence):
+    """Sliding window over RF blocks separated by a delay block."""
+    seq = dummy_sequence
+    rf1 = dummy_rf(amplitude=2.0, duration=1e-3)  # energy 4e-3
+    rf2 = dummy_rf(amplitude=4.0, duration=1e-3)  # energy 16e-3
+
+    seq.add_block(rf1)
+    seq.add_block(pp.make_delay(2e-3))
+    seq.add_block(rf2)
+
+    # window too small to contain both RF blocks: only the stronger counts
+    mean_pwr, _, rms, energy = seq.calc_rf_power(window_duration=2.5e-3)
+    assert np.isclose(energy, 16e-3)
+    assert np.isclose(mean_pwr, 16e-3 / 2.5e-3)
+    assert np.isclose(rms, np.sqrt(16e-3 / 2.5e-3))
+
+    # window large enough for both RF blocks and the delay between them
+    mean_pwr, _, rms, energy = seq.calc_rf_power(window_duration=4e-3)
+    assert np.isclose(energy, 20e-3)
+    assert np.isclose(mean_pwr, 20e-3 / 4e-3)
+    assert np.isclose(rms, np.sqrt(20e-3 / 4e-3))
+
+
+def test_sequence_block_range(dummy_rf, dummy_sequence):
+    """block_range restricts the calculation to 1-based block indices, like MATLAB blockRange."""
+    seq = dummy_sequence
+    rf1 = dummy_rf(amplitude=1.0, duration=1e-3)  # energy 1e-3
+    rf2 = dummy_rf(amplitude=2.0, duration=1e-3)  # energy 4e-3
+    rf3 = dummy_rf(amplitude=4.0, duration=1e-3)  # energy 16e-3
+
+    seq.add_block(rf1)
+    seq.add_block(rf2)
+    seq.add_block(rf3)
+
+    mean_pwr, peak, rms, energy = seq.calc_rf_power(block_range=(2, 3))
+    assert np.isclose(energy, 20e-3)
+    assert np.isclose(mean_pwr, 20e-3 / 2e-3)
+    assert np.isclose(rms, np.sqrt(20e-3 / 2e-3))
+    assert np.isclose(peak, 16.0)
+
+    # single block
+    mean_pwr, peak, _, energy = seq.calc_rf_power(block_range=(2, 2))
+    assert np.isclose(energy, 4e-3)
+    assert np.isclose(mean_pwr, 4.0)
+    assert np.isclose(peak, 4.0)
+
+    # inf end selects all remaining blocks
+    _, _, _, energy = seq.calc_rf_power(block_range=(2, np.inf))
+    assert np.isclose(energy, 20e-3)
+
+    # default covers all blocks
+    _, _, _, energy = seq.calc_rf_power()
+    assert np.isclose(energy, 21e-3)
+
+
+def test_sequence_range_mutually_exclusive(dummy_rf, dummy_sequence):
+    seq = dummy_sequence
+    seq.add_block(dummy_rf(amplitude=1.0, duration=1e-3))
+
+    with pytest.raises(ValueError, match='either time_range or block_range'):
+        seq.calc_rf_power(time_range=(0, 1e-3), block_range=(1, 1))
+
+
+def test_invalid_time_range(dummy_rf, dummy_sequence):
+    seq = dummy_sequence
+    seq.add_block(dummy_rf(amplitude=1.0, duration=1e-3))
+
+    for bad_range in [5.0, (0.0,), (0.0, 1e-3, 2e-3), (2e-3, 1e-3), 'bad']:
+        with pytest.raises(ValueError, match='time_range'):
+            seq.calc_rf_power(time_range=bad_range)
+
+
+def test_invalid_block_range(dummy_rf, dummy_sequence):
+    seq = dummy_sequence
+    seq.add_block(dummy_rf(amplitude=1.0, duration=1e-3))
+    seq.add_block(dummy_rf(amplitude=1.0, duration=1e-3))
+
+    for bad_range in [(0, 2), (2, 1), (1, 3), 'bad']:
+        with pytest.raises(ValueError, match='block_range'):
+            seq.calc_rf_power(block_range=bad_range)
+
+
+def test_invalid_window_duration(dummy_rf, dummy_sequence):
+    seq = dummy_sequence
+    seq.add_block(dummy_rf(amplitude=1.0, duration=1e-3))
+
+    for bad_window in [0.0, -1e-3]:
+        with pytest.raises(ValueError, match='window_duration'):
+            seq.calc_rf_power(window_duration=bad_window)
+
+
+def test_sequence_no_rf(dummy_sequence):
+    """A sequence without RF events has zero RF power."""
+    seq = dummy_sequence
+    seq.add_block(pp.make_delay(1e-3))
+
+    mean_pwr, peak, rms, energy = seq.calc_rf_power()
+
+    assert energy == 0
+    assert mean_pwr == 0
+    assert rms == 0
+    assert peak == 0
+
+
+def test_sequence_empty(dummy_sequence):
+    """An empty sequence returns NaN for mean power and RMS, like MATLAB."""
+    seq = dummy_sequence
+
+    mean_pwr, _, rms, energy = seq.calc_rf_power()
+
+    assert np.isnan(mean_pwr)
+    assert np.isnan(rms)
+    assert energy == 0
