@@ -64,6 +64,7 @@ class Sequence:
         self.grad_library = EventLibrary()
         self.label_inc_library = EventLibrary()
         self.label_set_library = EventLibrary()
+        self.loop_library = EventLibrary()
         self.rf_library = EventLibrary()
         self.shape_library = EventLibrary(numpy_data=True)
         self.trigger_library = EventLibrary()
@@ -1156,6 +1157,9 @@ class Sequence:
 
     def register_label_event(self, event: SimpleNamespace) -> int:
         return block.register_label_event(self, event)
+
+    def register_loop_event(self, event: SimpleNamespace) -> int:
+        return block.register_loop_event(self, event)
 
     def register_rf_event(self, event: SimpleNamespace) -> Tuple[int, List[int]]:
         return block.register_rf_event(self, event)

@@ -240,6 +240,20 @@ def write(self, file_name: Union[str, Path], create_signature, remove_duplicates
                 output_file.write(s)
             output_file.write('\n')
 
+        if len(self.loop_library.data) != 0:
+            output_file.write('# Extension specification for loop events:\n')
+            output_file.write('# id loop_id on_off\n')
+
+            tid = self.get_extension_type_ID('LOOPS')
+            output_file.write(f'extension LOOPS {tid}\n')
+            id_format_str = '{:.0f} {:.0f} {:.0f}\n'
+
+            for k in self.loop_library.data:
+                data = self.loop_library.data[k]
+                s = id_format_str.format(k, data[0], data[1])
+                output_file.write(s)
+            output_file.write('\n')
+
         if len(self.shape_library.data) != 0:
             output_file.write('# Sequence Shapes\n')
             output_file.write('[SHAPES]\n\n')
@@ -499,6 +513,20 @@ def write_v141(self, file_name: Union[str, Path], create_signature, remove_dupli
             warn(
                 'WARNING! The sequence in memory uses "soft delay" extension, which is incompatible with the file format v1.4.1. The produced Pulseq file is only partially valid and may fail to load or operate in some cases.'
             )
+
+        if len(self.loop_library.data) != 0:
+            output_file.write('# Extension specification for loop events:\n')
+            output_file.write('# id loop_id on_off\n')
+
+            tid = self.get_extension_type_ID('LOOPS')
+            output_file.write(f'extension LOOPS {tid}\n')
+            id_format_str = '{:.0f} {:.0f} {:.0f}\n'
+
+            for k in self.loop_library.data:
+                data = self.loop_library.data[k]
+                s = id_format_str.format(k, data[0], data[1])
+                output_file.write(s)
+            output_file.write('\n')
 
         if len(self.shape_library.data) != 0:
             output_file.write('# Sequence Shapes\n')
