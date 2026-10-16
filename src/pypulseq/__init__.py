@@ -63,6 +63,6 @@ from pypulseq.rotate_3d import rotate_3d
 from pypulseq.scale_grad import scale_grad
 from pypulseq.split_gradient import split_gradient
 from pypulseq.split_gradient_at import split_gradient_at
-from pypulseq.supported_labels_rf_use import get_supported_labels
+from pypulseq.supported_labels_rf_use import add_supported_label, get_supported_labels
 from pypulseq.traj_to_grad import traj_to_grad
 from pypulseq.utils.tracing import enable_trace, disable_trace
