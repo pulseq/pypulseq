@@ -6002,7 +6002,7 @@ TotalDuration 150
 # id amplitude rise flat fall delay
 # ..      Hz/m   us   us   us    us
 [TRAP]
- 1       102459 240 9520 240   0
+ 1       100301  30 9940  30   0
  2       694444 180    0 180   0
  3      -694444 180    0 180   0
  6       665509 180    0 180   0
@@ -8265,4 +8265,4 @@ num_samples 4
 # It can be reproduced/verified with md5sum if the file trimmed to the position right above [SIGNATURE]
 # The new line character preceding [SIGNATURE] BELONGS to the signature (and needs to be stripped away for recalculating/verification)
 Type md5
-Hash 1b36f192fdef16f8aed55e65931a1883
+Hash d53fe106385b2591bffeb38ae210984a
