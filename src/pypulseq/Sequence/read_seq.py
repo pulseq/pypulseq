@@ -200,7 +200,14 @@ def read(self, path: str, detect_rf_use: Union[bool, None] = None, remove_duplic
                     return int(s)
 
                 def l2(s):
-                    return get_supported_labels().index(s) + 1
+                    labels = get_supported_labels()
+                    if s not in labels:
+                        input_file.close()
+                        raise ValueError(
+                            f'Unknown label {s!r} encountered while reading the file. '
+                            'Register it first with pypulseq.add_supported_label().'
+                        )
+                    return labels.index(s) + 1
 
                 self.label_set_library = __read_and_parse_events(input_file, l1, l2)
             elif section[:18] == 'extension LABELINC':
@@ -211,7 +218,14 @@ def read(self, path: str, detect_rf_use: Union[bool, None] = None, remove_duplic
                     return int(s)
 
                 def l2(s):
-                    return get_supported_labels().index(s) + 1
+                    labels = get_supported_labels()
+                    if s not in labels:
+                        input_file.close()
+                        raise ValueError(
+                            f'Unknown label {s!r} encountered while reading the file. '
+                            'Register it first with pypulseq.add_supported_label().'
+                        )
+                    return labels.index(s) + 1
 
                 self.label_inc_library = __read_and_parse_events(input_file, l1, l2)
             elif section[:16] == 'extension DELAYS':

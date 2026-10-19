@@ -1202,7 +1202,9 @@ class Sequence:
         for grad_id in seq_copy.grad_library.data:
             if seq_copy.grad_library.type[grad_id] == 'g':
                 data = seq_copy.grad_library.data[grad_id]
-                new_data = (*data[0:3], mapping[data[3]], mapping[data[4]], data[5])
+                # Time shape ID -1 marks oversampling (no shape library entry) and must not be remapped
+                time_id = mapping[data[4]] if data[4] > 0 else data[4]
+                new_data = (*data[0:3], mapping[data[3]], time_id, data[5])
                 if data != new_data:
                     seq_copy.grad_library.update(grad_id, None, new_data)
 
