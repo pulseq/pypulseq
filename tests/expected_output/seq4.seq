@@ -80,7 +80,7 @@ TotalDuration 0.12722
 [TRAP]
  1  1.69492e+06 240  350 240   0
  2 -1.66667e+06 240   60 240   0
- 3       102459 240 9520 240   0
+ 3       100200  20 9960  20   0
  4 -1.66667e+06 240    0 240   0
  5 -1.42857e+06 210    0 210   0
  6 -1.17647e+06 170    0 170   0
@@ -151,4 +151,4 @@ num_samples 2
 # It can be reproduced/verified with md5sum if the file trimmed to the position right above [SIGNATURE]
 # The new line character preceding [SIGNATURE] BELONGS to the signature (and needs to be stripped away for recalculating/verification)
 Type md5
-Hash 74a5b1a80817326ed54758f9cbe8c446
+Hash 420a97391738a060cae7a47bdb3b5d8b
