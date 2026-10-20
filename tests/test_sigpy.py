@@ -19,7 +19,7 @@ def test_sigpy_import():
 
 
 def test_sigpy_pulse_opts_invalid_pulse_type():
-    with pytest.raises(ValueError, match="Invalid pulse_type parameter\\. Must be one of 'SLR' or 'SMS'"):
+    with pytest.raises(ValueError, match="Invalid pulse_type parameter\\. Must be one of 'slr' or 'sms'"):
         SigpyPulseOpts(pulse_type='bogus')
 
 
