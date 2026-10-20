@@ -47,6 +47,44 @@ def test_option_requirements():
     assert gzr.type == 'trap'
 
 
+def test_invalid_duration():
+    for invalid in [0, -1e-3, np.nan, np.inf]:
+        with pytest.raises(ValueError, match='RF pulse duration must be positive'):
+            make_adiabatic_pulse(pulse_type='hypsec', duration=invalid)
+
+
+def test_negative_delay():
+    with pytest.raises(ValueError, match='Delay must be non-negative'):
+        make_adiabatic_pulse(pulse_type='hypsec', delay=-1e-3)
+
+
+def test_invalid_dwell():
+    for invalid in [0, -1e-6, np.nan]:
+        with pytest.raises(ValueError, match='Dwell must be positive'):
+            make_adiabatic_pulse(pulse_type='hypsec', dwell=invalid)
+
+
+def test_invalid_adiabaticity():
+    with pytest.raises(ValueError, match='adiabaticity must be positive'):
+        make_adiabatic_pulse(pulse_type='hypsec', adiabaticity=0)
+
+
+def test_invalid_hypsec_parameters():
+    with pytest.raises(ValueError, match='beta must be positive'):
+        make_adiabatic_pulse(pulse_type='hypsec', beta=-800)
+
+    with pytest.raises(ValueError, match='mu must be positive'):
+        make_adiabatic_pulse(pulse_type='hypsec', mu=0)
+
+
+def test_invalid_wurst_parameters():
+    with pytest.raises(ValueError, match='bandwidth must be positive'):
+        make_adiabatic_pulse(pulse_type='wurst', bandwidth=-40000)
+
+    with pytest.raises(ValueError, match='n_fac must be positive'):
+        make_adiabatic_pulse(pulse_type='wurst', n_fac=0)
+
+
 # My intention was to test that the rephase gradient area is appropriate,
 # but this doesn't pass and I'm highly suspicious of the calculation in
 # the code

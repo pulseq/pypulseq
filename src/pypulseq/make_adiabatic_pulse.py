@@ -40,60 +40,20 @@ def make_adiabatic_pulse(
     """
     Make an adiabatic inversion pulse.
 
-    Note: some parameters only affect certain pulse types and are ignored for other; e.g. bandwidth is ignored if
-    type='hypsec'.
-
-    hypsec(n=512, beta=800, mu=4.9, dur=0.012)
-        Design a hyperbolic secant adiabatic pulse. `mu` * `beta` becomes the amplitude of the frequency sweep.
-
-        Args:
-            - n (int): number of samples (should be a multiple of 4).
-            - beta (float): AM waveform parameter.
-            - mu (float): a constant, determines amplitude of frequency sweep.
-            - dur (float): pulse time (s).
-
-    Returns
-    -------
-            2-element tuple containing
-            - **a** (*array*): AM waveform.
-            - **om** (*array*): FM waveform (radians/s).
-
-    References
-    ----------
-            Baum, J., Tycko, R. and Pines, A. (1985). 'Broadband and adiabatic
-            inversion of a two-level system by phase-modulated pulses'.
-            Phys. Rev. A., 32:3435-3447.
-
-    wurst(n=512, n_fac=40, bw=40000.0, dur=0.002)
-        Design a WURST (wideband, uniform rate, smooth truncation) adiabatic inversion pulse
-
-        Args:
-            - n (int): number of samples (should be a multiple of 4).
-            - n_fac (int): power to exponentiate to within AM term. ~20 or greater is typical.
-            - bw (float): pulse bandwidth.
-            - dur (float): pulse time (s).
-
-    Returns
-    -------
-            2-element tuple containing
-            - **a** (*array*): AM waveform.
-            - **om** (*array*): FM waveform (radians/s).
-
-    References
-    ----------
-            Kupce, E. and Freeman, R. (1995). 'Stretched Adiabatic Pulses for
-            Broadband Spin Inversion'.
-            J. Magn. Reason. Set. A., 117:246-256.
+    Note: some parameters only affect certain pulse types and are ignored for others; e.g. `beta` and `mu` are only
+    used if `pulse_type='hypsec'`, while `bandwidth` and `n_fac` are only used if `pulse_type='wurst'`.
 
     Parameters
     ----------
     pulse_type : str
         One of 'hypsec' or 'wurst' pulse types.
-    adiabaticity : int, default=4
-    bandwidth : int, default=40000
-        Pulse bandwidth in hertz (Hz).
+    adiabaticity : float, default=4
+        Dimensionless adiabaticity factor determining the RF amplitude required
+        to maintain adiabatic behavior during the frequency sweep.
+    bandwidth : float, default=40000
+        Pulse bandwidth in hertz (Hz). Only used if `pulse_type='wurst'`.
     beta : float, default=800.0
-        AM waveform parameter in radians per second (rad/s).
+        AM waveform parameter in radians per second (rad/s). Only used if `pulse_type='hypsec'`.
     delay : float, default=0
         Delay in seconds (s).
     duration : float, default=10e-3
@@ -106,10 +66,10 @@ def make_adiabatic_pulse(
         Maximum gradient strength (Hz/m).
     max_slew : float, default=None
         Maximum slew rate (Hz/m/s).
-    mu : float, default=4.9
-        Constant determining amplitude of frequency sweep.
     n_fac : int, default=40
-        Power to exponentiate to within AM term. ~20 or greater is typical.
+        Power to exponentiate to within AM term. ~20 or greater is typical. Only used if `pulse_type='wurst'`.
+    mu : float, default=4.9
+        Constant determining amplitude of frequency sweep. Only used if `pulse_type='hypsec'`.
     phase_offset : float, default=0
         Phase offset in radians (rad).
     return_gz : bool, default=False
@@ -142,7 +102,31 @@ def make_adiabatic_pulse(
     ValueError
         If invalid pulse type is encountered.
         If invalid pulse use is encountered.
+        If `duration` is not positive or not finite.
+        If `delay` is negative or not finite.
+        If `dwell` is not positive or not finite.
+        If `adiabaticity` is not positive.
+        If `beta` or `mu` is not positive and `pulse_type='hypsec'`.
+        If `bandwidth` or `n_fac` is not positive and `pulse_type='wurst'`.
         If slice thickness is not provided but slice-selective trapezoid event is expected.
+
+    Notes
+    -----
+    hypsec
+        Design a hyperbolic secant adiabatic pulse. `mu` * `beta` becomes the
+        amplitude of the frequency sweep. [1]_
+
+    wurst
+        Design a WURST (wideband, uniform rate, smooth truncation) adiabatic
+        inversion pulse. [2]_
+
+    References
+    ----------
+    .. [1] Baum, J., Tycko, R. and Pines, A. (1985). 'Broadband and adiabatic
+       inversion of a two-level system by phase-modulated pulses'.
+       Phys. Rev. A., 32:3435-3447.
+    .. [2] Kupce, E. and Freeman, R. (1995). 'Stretched Adiabatic Pulses for
+       Broadband Spin Inversion'. J. Magn. Reson. Ser. A., 117:246-256.
     """
     if system is None:
         system = Opts.default
@@ -152,13 +136,35 @@ def make_adiabatic_pulse(
 
     valid_pulse_types = ['hypsec', 'wurst']
     if (not pulse_type) or (pulse_type not in valid_pulse_types):
-        raise ValueError(f'Invalid type parameter. Must be one of {valid_pulse_types}.Passed: {pulse_type}')
+        raise ValueError(f'Invalid type parameter. Must be one of {valid_pulse_types}. Passed: {pulse_type}')
     valid_rf_use_labels = get_supported_rf_uses()
     if use != '' and use not in valid_rf_use_labels:
         raise ValueError(f'Invalid use parameter. Must be one of {valid_rf_use_labels}. Passed: {use}')
 
+    if not np.isfinite(duration) or duration <= 0:
+        raise ValueError('RF pulse duration must be positive.')
+
+    if not np.isfinite(delay) or delay < 0:
+        raise ValueError('Delay must be non-negative.')
+
+    if adiabaticity <= 0:
+        raise ValueError('adiabaticity must be positive.')
+
+    if pulse_type == 'hypsec':
+        if beta <= 0:
+            raise ValueError('beta must be positive.')
+        if mu <= 0:
+            raise ValueError('mu must be positive.')
+    elif pulse_type == 'wurst':
+        if bandwidth <= 0:
+            raise ValueError('bandwidth must be positive.')
+        if n_fac <= 0:
+            raise ValueError('n_fac must be positive.')
+
     if dwell is None:
         dwell = system.rf_raster_time
+    elif not np.isfinite(dwell) or dwell <= 0:
+        raise ValueError('Dwell must be positive.')
 
     # WTC and PS - we have no idea why eps is added here. Leaving for now.
     n_raw = round(duration / dwell + eps)

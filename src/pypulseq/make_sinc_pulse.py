@@ -43,7 +43,7 @@ def make_sinc_pulse(
     flip_angle : float
         Flip angle in radians (rad).
     apodization : float, default=0
-        Apodization.
+        Apodization factor, must be in the range [0, 1].
     center_pos : float, default=0.5
         Position of RF peak between 0 and 1, where 0 means the beginning of the pulse and 1 means the end of the pulse.
     delay : float, default=0
@@ -79,8 +79,6 @@ def make_sinc_pulse(
     phase_ppm : float, default=0
         PPM phase offset in radians per megahertz (rad/MHz).
 
-    See also `pypulseq.Sequence.sequence.Sequence.add_block()`.
-
     Returns
     -------
     rf : SimpleNamespace
@@ -94,7 +92,15 @@ def make_sinc_pulse(
     ------
     ValueError
         If invalid `use` parameter was passed.
+        If `duration` is not positive or not finite.
+        If `dwell` or `delay` is negative or not finite.
+        If `center_pos` or `apodization` is not in the range [0, 1].
+        If `time_bw_product` is not positive.
         If `return_gz=True` and `slice_thickness` was not provided.
+
+    See Also
+    --------
+    - `pypulseq.Sequence.sequence.Sequence.add_block()`
     """
     if system is None:
         system = Opts.default
@@ -103,11 +109,26 @@ def make_sinc_pulse(
     if use != '' and use not in valid_pulse_uses:
         raise ValueError(f'Invalid use parameter. Must be one of {valid_pulse_uses}. Passed: {use}')
 
+    if not np.isfinite(duration) or duration <= 0:
+        raise ValueError('RF pulse duration must be positive.')
+
+    if not np.isfinite(dwell) or dwell < 0:
+        raise ValueError('Dwell must be non-negative.')
+
+    if not np.isfinite(delay) or delay < 0:
+        raise ValueError('Delay must be non-negative.')
+
+    if not np.isfinite(center_pos) or not 0 <= center_pos <= 1:
+        raise ValueError('center_pos must be in the range [0, 1].')
+
+    if not np.isfinite(apodization) or not 0 <= apodization <= 1:
+        raise ValueError('apodization must be in the range [0, 1].')
+
+    if not np.isfinite(time_bw_product) or time_bw_product <= 0:
+        raise ValueError('time_bw_product must be positive.')
+
     if dwell == 0:
         dwell = system.rf_raster_time
-
-    if duration <= 0:
-        raise ValueError('RF pulse duration must be positive.')
 
     bandwidth = time_bw_product / duration
     alpha = apodization
@@ -135,7 +156,7 @@ def make_sinc_pulse(
     rf.use = use
 
     if return_gz:
-        if slice_thickness == 0:
+        if slice_thickness <= 0:
             raise ValueError('Slice thickness must be provided if return_gz is True')
 
         if max_grad > 0:

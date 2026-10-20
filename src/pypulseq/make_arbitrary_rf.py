@@ -45,17 +45,19 @@ def make_arbitrary_rf(
     bandwidth : float, default=0
         Bandwidth in hertz (Hz).
     delay : float, default=0
-        Delay in seconds (s) of accompanying slice select trapezoidal event.
+        Delay in seconds (s) of the radio-frequency pulse event.
     dwell : float, default=0
         Temporal sampling step of waveform in seconds (s). If set to 0, will use `system.rf_raster_time`.
     freq_offset : float, default=0
         Frequency offset in hertz (Hz).
     no_signal_scaling : bool, default=False
         If set to True no rescaling of the RF amplitude will happen. E.g. for adiabatic pulses.
-    max_grad : float, default=system.max_grad
-        Maximum gradient strength (Hz/m) of accompanying slice select trapezoidal event .
-    max_slew : float, default=system.max_slew
+    max_grad : float, default=0
+        Maximum gradient strength (Hz/m) of accompanying slice select trapezoidal event.
+        If <= 0, `system.max_grad` is used.
+    max_slew : float, default=0
         Maximum slew rate (Hz/m/s) of accompanying slice select trapezoidal event.
+        If <= 0, `system.max_slew` is used.
     phase_offset : float, default=0
         Phase offset in radians (rad).
     return_gz : bool, default=False
@@ -89,7 +91,8 @@ def make_arbitrary_rf(
     ------
     ValueError
         If invalid `use` parameter is passed.
-        If `signal` with ndim > 1 is passed.
+        If `signal` is not a non-empty 1-D array.
+        If `dwell`, `delay` or `time_bw_product` is negative or not finite.
         If `return_gz=True`, and `slice_thickness` and `bandwidth` are not passed.
     """
     if system is None:
@@ -99,12 +102,23 @@ def make_arbitrary_rf(
     if use != '' and use not in valid_pulse_uses:
         raise ValueError(f'Invalid use parameter. Must be one of {valid_pulse_uses}. Passed: {use}')
 
+    if not np.isfinite(dwell) or dwell < 0:
+        raise ValueError('Dwell must be non-negative.')
+
+    if not np.isfinite(delay) or delay < 0:
+        raise ValueError('Delay must be non-negative.')
+
+    if time_bw_product < 0:
+        raise ValueError('time_bw_product must be non-negative.')
+
     if dwell == 0:
         dwell = system.rf_raster_time
 
-    signal = np.squeeze(signal)
-    if signal.ndim > 1:
+    signal = np.atleast_1d(np.squeeze(np.asarray(signal)))
+    if signal.ndim != 1:
         raise ValueError(f'signal should have ndim=1. Passed ndim={signal.ndim}')
+    if signal.size == 0:
+        raise ValueError('signal must not be empty.')
 
     if not no_signal_scaling:
         signal = signal / np.abs(np.sum(signal * dwell)) * flip_angle / (2 * np.pi)
