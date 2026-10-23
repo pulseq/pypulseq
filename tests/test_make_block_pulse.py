@@ -17,11 +17,22 @@ def test_bandwidth_and_duration_error():
 
 
 def test_invalid_bandwidth_and_duration_error():
-    with pytest.raises(ValueError, match=r'One of bandwidth or duration must be defined and be > 0.'):
+    with pytest.raises(ValueError, match=r'Duration must be positive.'):
         make_block_pulse(flip_angle=np.pi, duration=-1e-3)
 
-    with pytest.raises(ValueError, match=r'One of bandwidth or duration must be defined and be > 0.'):
+    with pytest.raises(ValueError, match=r'Duration must be positive.'):
+        make_block_pulse(flip_angle=np.pi, duration=0)
+
+    with pytest.raises(ValueError, match=r'Bandwidth must be positive.'):
         make_block_pulse(flip_angle=np.pi, bandwidth=-1e3)
+
+    with pytest.raises(ValueError, match=r'time_bw_product must be positive.'):
+        make_block_pulse(flip_angle=np.pi, bandwidth=1e3, time_bw_product=-5)
+
+
+def test_negative_delay_error():
+    with pytest.raises(ValueError, match=r'Delay must be non-negative.'):
+        make_block_pulse(flip_angle=np.pi, duration=1e-3, delay=-1e-6)
 
 
 def test_default_duration_warning():

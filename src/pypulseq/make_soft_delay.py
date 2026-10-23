@@ -1,5 +1,8 @@
+import numbers
 from types import SimpleNamespace
 from typing import Union
+
+import numpy as np
 
 from pypulseq.utils.tracing import trace, trace_enabled
 
@@ -55,10 +58,14 @@ def make_soft_delay(
 
     Raises
     ------
+    TypeError
+        If `hint` is not a string.
     ValueError
-        If hint contains whitespace characters.
-    ValueError
-        If default_duration is not greater than 0.
+        If `hint` is empty or contains whitespace characters.
+        If `default_duration` is not greater than 0 or not finite.
+        If `offset` or `factor` is not finite.
+        If `factor` is zero.
+        If `numID` is not a non-negative integer or None.
 
     Examples
     --------
@@ -99,19 +106,23 @@ def make_soft_delay(
     soft_delay = SimpleNamespace()
 
     # Validate hint parameter
+    if not isinstance(hint, str):
+        raise TypeError("Parameter 'hint' must be a string.")
     if not hint:
         raise ValueError("Parameter 'hint' cannot be empty.")
     if any(c.isspace() for c in hint):
         raise ValueError("Parameter 'hint' may not contain white space characters.")
-    if not isinstance(hint, str):
-        raise TypeError("Parameter 'hint' must be a string.")
 
     # Validate numeric parameters
-    if default_duration <= 0:
+    if not np.isfinite(default_duration) or default_duration <= 0:
         raise ValueError('Default duration must be greater than 0.')
+    if not np.isfinite(offset):
+        raise ValueError("Parameter 'offset' must be finite.")
+    if not np.isfinite(factor):
+        raise ValueError("Parameter 'factor' must be finite.")
     if factor == 0:
         raise ValueError("Parameter 'factor' cannot be zero (would make duration calculation undefined).")
-    if numID is not None and (not isinstance(numID, int) or numID < 0):
+    if numID is not None and (not isinstance(numID, numbers.Integral) or isinstance(numID, bool) or numID < 0):
         raise ValueError("Parameter 'numID' must be a non-negative integer or None.")
 
     soft_delay.type = 'soft_delay'
