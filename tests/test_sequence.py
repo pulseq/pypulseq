@@ -517,7 +517,9 @@ class TestSequence:
             #     block_compare.rf.use = block_orig.rf.use
 
         # Test for approximate equality of kspace calculation
-        assert seq2.calculate_kspace() == Approx(seq.calculate_kspace(), abs=1e-1, nan_ok=True)
+        assert seq2.calculate_kspace(output_as_dict=True) == Approx(
+            seq.calculate_kspace(output_as_dict=True), abs=1e-1, nan_ok=True
+        )
 
         # Test whether labels are the same
         labels_seq = seq.evaluate_labels(evolution='blocks')
@@ -607,7 +609,9 @@ class TestSequence:
                         block_compare.rf.center = block_orig.rf.center
 
             # Test for approximate equality of kspace calculation
-            assert seq2.calculate_kspace() == Approx(seq.calculate_kspace(), abs=1e-1, nan_ok=True)
+            assert seq2.calculate_kspace(output_as_dict=True) == Approx(
+                seq.calculate_kspace(output_as_dict=True), abs=1e-1, nan_ok=True
+            )
 
             # Test whether labels are the same
             labels_seq = seq.evaluate_labels(evolution='blocks')
@@ -650,7 +654,9 @@ class TestSequence:
             )
 
         # Test for approximate equality of kspace calculation
-        assert seq2.calculate_kspace() == Approx(seq.calculate_kspace(), abs=1e-6, nan_ok=True)
+        assert seq2.calculate_kspace(output_as_dict=True) == Approx(
+            seq.calculate_kspace(output_as_dict=True), abs=1e-6, nan_ok=True
+        )
 
         # Test whether labels are the same
         labels_seq = seq.evaluate_labels(evolution='blocks')
