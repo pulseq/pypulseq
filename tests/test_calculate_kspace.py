@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import pypulseq as pp
 import pytest
@@ -55,11 +57,16 @@ def test_calculate_kspace_dict_output_contains_t_ktraj_and_matches_legacy():
         't_excitation',
         't_refocusing',
         't_adc',
+        'slice_pos',
     }
 
     assert isinstance(result['t_ktraj'], np.ndarray)
     assert result['t_ktraj'].ndim == 1
     assert result['t_ktraj'].shape[0] >= result['t_adc'].shape[0]
+
+    assert isinstance(result['slice_pos'], np.ndarray)
+    assert result['slice_pos'].shape == (result['k_traj'].shape[0], len(result['t_excitation']))
+    np.testing.assert_allclose(result['slice_pos'], 0)
 
     k_traj_adc, k_traj, t_excitation, t_refocusing, t_adc = legacy
 
@@ -78,3 +85,31 @@ def test_calculate_kspacePP_deprecated_passthrough_output_as_dict():
 
     assert 't_ktraj' in result
     assert isinstance(result['t_ktraj'], np.ndarray)
+
+
+def test_calculate_kspace_no_excitation_slice_pos_empty():
+    system = pp.Opts()
+    seq = pp.Sequence(system)
+
+    gx = pp.make_trapezoid(channel='x', flat_area=64 / 0.256, flat_time=3.2e-3, system=system)
+    adc = pp.make_adc(num_samples=64, duration=gx.flat_time, delay=gx.rise_time, system=system)
+    seq.add_block(gx, adc)
+
+    result = seq.calculate_kspace(output_as_dict=True)
+
+    assert isinstance(result['slice_pos'], np.ndarray)
+    assert result['slice_pos'].shape == (result['k_traj'].shape[0], 0)
+    assert result['t_excitation'] == []
+
+
+def test_calculate_kspace_legacy_output_logs_deprecation_notice(caplog):
+    seq = _make_simple_gre_sequence()
+
+    with caplog.at_level(logging.WARNING, logger='pypulseq'):
+        seq.calculate_kspace()
+    assert any('output_as_dict=True' in r.message for r in caplog.records)
+
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger='pypulseq'):
+        seq.calculate_kspace(output_as_dict=True)
+    assert not any('output_as_dict=True' in r.message for r in caplog.records)

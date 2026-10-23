@@ -306,8 +306,8 @@ class Sequence:
             If gradient_offset is a list or array, it is expected to have the same length as the number of gradient
             channels and the first element is applied to the first gradient channel, the second to the second, and so on.
         output_as_dict : bool, default=False
-            If True, return a dict containing all available outputs (including `t_ktraj`).
-            If False, return the legacy 5-tuple output for backwards compatibility.
+            If True, return a dict containing all available outputs (including `t_ktraj` and `slice_pos`).
+            If False, return the legacy 5-tuple output for backwards compatibility and log a deprecation notice.
 
         Returns
         -------
@@ -322,7 +322,7 @@ class Sequence:
         t_adc : numpy.array
             Sampling timepoints.
 
-        When `output_as_dict=True`, the returned dictionary contains the additional key `t_ktraj`.
+        When `output_as_dict=True`, the returned dictionary contains the additional keys `t_ktraj` and `slice_pos`.
         """
         return ext_calculate_kspace(
             self,

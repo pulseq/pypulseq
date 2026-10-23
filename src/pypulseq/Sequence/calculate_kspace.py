@@ -1,9 +1,12 @@
+import logging
 from typing import Any, List, Tuple, Union
 
 import numpy as np
 
 import pypulseq as pp
 from pypulseq import eps
+
+logger = logging.getLogger(__name__)
 
 
 def calculate_kspace(
@@ -33,8 +36,8 @@ def calculate_kspace(
         If gradient_offset is a list or array, it is expected to have the same length as the number of gradient
         channels and the first element is applied to the first gradient channel, the second to the second, and so on.
     output_as_dict : bool, default=False
-        If True, return a dict containing all available outputs (including `t_ktraj`).
-        If False, return the legacy 5-tuple output for backwards compatibility.
+        If True, return a dict containing all available outputs (including `t_ktraj` and `slice_pos`).
+        If False, return the legacy 5-tuple output for backwards compatibility and log a deprecation notice.
 
     Returns
     -------
@@ -49,7 +52,7 @@ def calculate_kspace(
     t_adc : numpy.array
         Sampling timepoints.
 
-    When `output_as_dict=True`, the returned dictionary contains the additional key `t_ktraj`.
+    When `output_as_dict=True`, the returned dictionary contains the additional keys `t_ktraj` and `slice_pos`.
     """
     if np.any(np.abs(trajectory_delay) > 100e-6):
         raise Warning(f'Trajectory delay of {trajectory_delay * 1e6} us is suspiciously high')
@@ -181,7 +184,7 @@ def calculate_kspace(
 
         slice_pos[~np.isfinite(slice_pos)] = 0  # Reset undefined to 0
     else:
-        slice_pos = []
+        slice_pos = np.zeros((n_grad_channels, 0))
 
     # Integrate waveforms as piecewise polynomials (pp) to produce gradient moments
     grad_moments_pp = []
@@ -244,6 +247,12 @@ def calculate_kspace(
             't_excitation': t_excitation,
             't_refocusing': t_refocusing,
             't_adc': t_adc,
+            'slice_pos': slice_pos,
         }
+
+    logger.warning(
+        'calculate_kspace: the tuple return value is deprecated and will be replaced by a dict in a future '
+        'release. Call calculate_kspace(..., output_as_dict=True) to opt in to the new output now.'
+    )
 
     return k_traj_adc, k_traj, t_excitation, t_refocusing, t_adc
