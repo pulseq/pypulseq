@@ -108,7 +108,7 @@ def make_arbitrary_rf(
     if not np.isfinite(delay) or delay < 0:
         raise ValueError('Delay must be non-negative.')
 
-    if time_bw_product < 0:
+    if not np.isfinite(time_bw_product) or time_bw_product < 0:
         raise ValueError('time_bw_product must be non-negative.')
 
     if dwell == 0:
@@ -158,9 +158,9 @@ def make_arbitrary_rf(
         rf.center, _ = calc_rf_center(rf)
 
     if return_gz:
-        if slice_thickness <= 0:
+        if not np.isfinite(slice_thickness) or slice_thickness <= 0:
             raise ValueError('Slice thickness must be provided.')
-        if bandwidth <= 0:
+        if not np.isfinite(bandwidth) or bandwidth <= 0:
             raise ValueError('Bandwidth of pulse must be provided.')
 
         if max_grad > 0:

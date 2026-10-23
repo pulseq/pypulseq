@@ -156,7 +156,7 @@ def make_sinc_pulse(
     rf.use = use
 
     if return_gz:
-        if slice_thickness <= 0:
+        if not np.isfinite(slice_thickness) or slice_thickness <= 0:
             raise ValueError('Slice thickness must be provided if return_gz is True')
 
         if max_grad > 0:

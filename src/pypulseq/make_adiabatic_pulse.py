@@ -131,7 +131,7 @@ def make_adiabatic_pulse(
     if system is None:
         system = Opts.default
 
-    if return_gz and slice_thickness <= 0:
+    if return_gz and (not np.isfinite(slice_thickness) or slice_thickness <= 0):
         raise ValueError('Slice thickness must be provided')
 
     valid_pulse_types = ['hypsec', 'wurst']
@@ -147,18 +147,18 @@ def make_adiabatic_pulse(
     if not np.isfinite(delay) or delay < 0:
         raise ValueError('Delay must be non-negative.')
 
-    if adiabaticity <= 0:
+    if not np.isfinite(adiabaticity) or adiabaticity <= 0:
         raise ValueError('adiabaticity must be positive.')
 
     if pulse_type == 'hypsec':
-        if beta <= 0:
+        if not np.isfinite(beta) or beta <= 0:
             raise ValueError('beta must be positive.')
-        if mu <= 0:
+        if not np.isfinite(mu) or mu <= 0:
             raise ValueError('mu must be positive.')
     elif pulse_type == 'wurst':
-        if bandwidth <= 0:
+        if not np.isfinite(bandwidth) or bandwidth <= 0:
             raise ValueError('bandwidth must be positive.')
-        if n_fac <= 0:
+        if not np.isfinite(n_fac) or n_fac <= 0:
             raise ValueError('n_fac must be positive.')
 
     if dwell is None:

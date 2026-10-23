@@ -190,7 +190,7 @@ def sigpy_n_seq(
         rfp.delay = rfp.dead_time
 
     if return_gz:
-        if slice_thickness <= 0:
+        if not np.isfinite(slice_thickness) or slice_thickness <= 0:
             raise ValueError('Slice thickness must be provided')
 
         if max_grad > 0:

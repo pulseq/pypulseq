@@ -33,20 +33,20 @@ def test_negative_delay():
         make_arbitrary_rf(signal=np.ones(10), flip_angle=1, delay=-1e-6)
 
 
-def test_negative_time_bw_product():
-    with pytest.raises(ValueError, match='time_bw_product must be non-negative'):
-        make_arbitrary_rf(signal=np.ones(10), flip_angle=1, time_bw_product=-1)
+def test_invalid_time_bw_product():
+    for invalid in [-1, np.nan, np.inf]:
+        with pytest.raises(ValueError, match='time_bw_product must be non-negative'):
+            make_arbitrary_rf(signal=np.ones(10), flip_angle=1, time_bw_product=invalid)
 
 
 def test_return_gz_requires_slice_thickness_and_bandwidth():
-    with pytest.raises(ValueError, match='Slice thickness must be provided'):
-        make_arbitrary_rf(signal=np.ones(10), flip_angle=1, return_gz=True, slice_thickness=0, bandwidth=4e3)
+    for invalid in [0, -1e-3, np.nan]:
+        with pytest.raises(ValueError, match='Slice thickness must be provided'):
+            make_arbitrary_rf(signal=np.ones(10), flip_angle=1, return_gz=True, slice_thickness=invalid, bandwidth=4e3)
 
-    with pytest.raises(ValueError, match='Slice thickness must be provided'):
-        make_arbitrary_rf(signal=np.ones(10), flip_angle=1, return_gz=True, slice_thickness=-1e-3, bandwidth=4e3)
-
-    with pytest.raises(ValueError, match='Bandwidth of pulse must be provided'):
-        make_arbitrary_rf(signal=np.ones(10), flip_angle=1, return_gz=True, slice_thickness=5e-3, bandwidth=0)
+    for invalid in [0, np.nan]:
+        with pytest.raises(ValueError, match='Bandwidth of pulse must be provided'):
+            make_arbitrary_rf(signal=np.ones(10), flip_angle=1, return_gz=True, slice_thickness=5e-3, bandwidth=invalid)
 
 
 def test_valid():

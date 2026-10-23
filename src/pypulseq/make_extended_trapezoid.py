@@ -112,10 +112,10 @@ def make_extended_trapezoid(
     if skip_check is False and times[0] > 0 and amplitudes[0] != 0:
         raise ValueError('If first amplitude of a gradient is non-zero, it must connect to previous block')
 
-    if max_grad <= 0:
+    if not np.isfinite(max_grad) or max_grad <= 0:
         max_grad = system.max_grad
 
-    if max_slew <= 0:
+    if not np.isfinite(max_slew) or max_slew <= 0:
         max_slew = system.max_slew
 
     if convert_to_arbitrary:
