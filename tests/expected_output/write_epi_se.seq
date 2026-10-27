@@ -168,12 +168,12 @@ TotalDuration 0.08315
 # ..      Hz/m   us   us   us    us
 [TRAP]
  1       444444  90 3000  90  10
- 2       297772 190  420 190   0
- 3       195312 160  480 160   0
- 4 -1.24848e+06 250  300 250   0
- 5  1.27752e+06 250 1900 250   0
+ 2       242188  50  700  50   0
+ 3       162338  30  740  30   0
+ 4 -1.18391e+06 220  360 220   0
+ 5  1.26575e+06 230 1940 230   0
  6       781250 150  320 150   0
- 7       130208  30    0  30   0
+ 7      97656.2  20   20  20   0
  8      -781250 150  320 150   0
 
 # Format of ADC events:
@@ -3224,4 +3224,4 @@ num_samples 2
 # It can be reproduced/verified with md5sum if the file trimmed to the position right above [SIGNATURE]
 # The new line character preceding [SIGNATURE] BELONGS to the signature (and needs to be stripped away for recalculating/verification)
 Type md5
-Hash d1263111d6fda3fba939839d1be6276d
+Hash 6693f89e7003a2118e055e14b2495649
