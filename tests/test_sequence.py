@@ -9,8 +9,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pypulseq as pp
 import pytest
-from _pytest.python_api import ApproxBase
 from pypulseq import Sequence
+
+try:
+    from _pytest.approx import ApproxBase
+except ImportError:
+    from _pytest.python_api import ApproxBase  # older pytest
 
 expected_output_path = Path(__file__).parent / 'expected_output'
 
