@@ -11,9 +11,9 @@ import pypulseq as pp
 import pytest
 from pypulseq import Sequence
 
-try:
-    from _pytest.approx import ApproxBase
-except ImportError:
+if hasattr(pytest, 'Approx'):
+    ApproxBase = pytest.Approx  # public since pytest 9.2
+else:
     from _pytest.python_api import ApproxBase  # older pytest
 
 expected_output_path = Path(__file__).parent / 'expected_output'
@@ -24,6 +24,9 @@ class Approx(ApproxBase):
     Extension of pytest.approx that also handles approximate equality
     recursively within dicts, lists, tuples, and SimpleNamespace
     """
+
+    def __init__(self, expected, rel=None, abs=None, nan_ok=False):  # noqa: A002
+        super().__init__(expected, rel=rel, abs=abs, nan_ok=nan_ok)
 
     def __repr__(self):
         return str(self.expected)
@@ -49,6 +52,8 @@ class Approx(ApproxBase):
             return True
         elif isinstance(self.expected, SimpleNamespace):
             return actual.__dict__ == Approx(self.expected.__dict__, rel=self.rel, abs=self.abs, nan_ok=self.nan_ok)
+        elif isinstance(self.expected, (str, bytes, bool, type(None))):
+            return actual == self.expected
         else:
             return actual == pytest.approx(self.expected, rel=self.rel, abs=self.abs, nan_ok=self.nan_ok)
 
@@ -80,6 +85,8 @@ class Approx(ApproxBase):
             return Approx(self.expected.__dict__, rel=self.rel, abs=self.abs, nan_ok=self.nan_ok)._repr_compare(
                 actual.__dict__
             )
+        elif isinstance(self.expected, (str, bytes, bool, type(None))):
+            return [f'Values do not match: {actual!r} != {self.expected!r}']
         else:
             return pytest.approx(self.expected, rel=self.rel, abs=self.abs, nan_ok=self.nan_ok)._repr_compare(actual)
 
