@@ -126,6 +126,11 @@ skip-magic-trailing-comma = false
 [tool.typos.default]
 locale = "en-us"
 
+[tool.typos.default.extend-words]
+writeable = "writeable" # this is a valid numpy array attribute
+Reson = "Reson"         # required for J. Magn. Reson. Ser. A.
+Ser = "Ser"             # required for J. Magn. Reson. Ser. A.
+
 # PyTest section
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -140,4 +145,4 @@ markers = ["sigpy: tests that require sigpy"]
 # Ref: https://github.com/codespell-project/codespell#using-a-config-file
 skip = '.git*'
 check-hidden = true
-ignore-words-list = 'te,fo,nd,maked,datas,iten,itel,tread'
+ignore-words-list = 'te,fo,nd,maked,datas,iten,itel,tread,Reson,Ser'

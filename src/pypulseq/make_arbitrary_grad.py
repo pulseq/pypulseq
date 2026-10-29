@@ -34,24 +34,24 @@ def make_arbitrary_grad(
     channel : str
         Orientation of gradient event of arbitrary shape. Must be one of `x`, `y` or `z`.
     waveform : numpy.ndarray
-        Arbitrary waveform.
-    first : float
+        Arbitrary waveform. Must be a non-empty 1-D array.
+    first : float, default=None
         Gradient value at the start of the gradient event. (t=0)
         Will default to a linear extrapolated value if not provided.
-    last : float
+    last : float, default=None
         Gradient value at the end of the gradient event. (t=duration)
         Will default to a linear extrapolated value if not provided.
+    delay : float, default=0
+        Delay in seconds (s).
+    max_grad : float, default=None
+        Maximum gradient strength (Hz/m).
+        Will default to `system.max_grad` if not provided or 0.
+    max_slew : float, default=None
+        Maximum slew rate (Hz/m/s).
+        Will default to `system.max_slew` if not provided or 0.
     system : Opts, default=Opts()
         System limits.
         Will default to `pypulseq.opts.default` if not provided.
-    max_grad : float
-        Maximum gradient strength.
-        Will default to `system.max_grad` if not provided.
-    max_slew : float
-        Maximum slew rate.
-        Will default to `system.max_slew` if not provided.
-    delay : float, default=0
-        Delay in seconds (s).
     oversampling : bool, default=False
         Boolean flag to indicate if gradient is oversampled by a factor of 2.
 
@@ -64,20 +64,35 @@ def make_arbitrary_grad(
     ------
     ValueError
         If invalid `channel` is passed. Must be one of x, y or z.
+        If `waveform` is not a non-empty 1-D array.
+        If `waveform` has less than 2 samples and `first` or `last` are not provided.
+        If `waveform` has an even number of samples and `oversampling` is enabled.
+        If `delay` is negative or not finite.
         If slew rate is violated.
         If gradient amplitude is violated.
     """
     if system is None:
         system = Opts.default
 
+    if channel not in ['x', 'y', 'z']:
+        raise ValueError(f'Invalid channel. Must be one of x, y or z. Passed: {channel}')
+
+    waveform = np.atleast_1d(np.squeeze(np.asarray(waveform)))
+    if waveform.ndim != 1:
+        raise ValueError(f'waveform should have ndim=1. Passed ndim={waveform.ndim}')
+    if waveform.size == 0:
+        raise ValueError('waveform must not be empty.')
+    if len(waveform) < 2 and (first is None or last is None):
+        raise ValueError('waveform must contain at least 2 samples unless `first` and `last` are provided.')
+
+    if not np.isfinite(delay) or delay < 0:
+        raise ValueError('Delay must be non-negative.')
+
     if max_grad is None or max_grad == 0:
         max_grad = system.max_grad
 
     if max_slew is None or max_slew == 0:
         max_slew = system.max_slew
-
-    if channel not in ['x', 'y', 'z']:
-        raise ValueError(f'Invalid channel. Must be one of x, y or z. Passed: {channel}')
 
     if first is None or last is None:
 
@@ -93,7 +108,7 @@ def make_arbitrary_grad(
 
     # Slew rate calculation
     if oversampling:
-        edge_scale = system.grad_raster_time * 2
+        edge_scale = system.grad_raster_time / 2
         pre = first - waveform[0]
         post = last - waveform[-1]
     else:

@@ -1,8 +1,9 @@
 import math
+import numbers
 from collections import OrderedDict
 from copy import deepcopy
 from types import SimpleNamespace
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Literal, Tuple, Union
 from warnings import warn
 
 try:
@@ -17,6 +18,7 @@ from scipy.interpolate import PPoly
 
 from pypulseq import __version__, eps
 from pypulseq.calc_rf_center import calc_rf_center
+from pypulseq.calc_rf_power import calc_rf_power
 from pypulseq.check_timing import check_timing as ext_check_timing
 from pypulseq.check_timing import print_error_report
 from pypulseq.decompress_shape import decompress_shape
@@ -26,7 +28,7 @@ from pypulseq.Sequence import block
 from pypulseq.Sequence.calc_grad_spectrum import calculate_gradient_spectrum
 from pypulseq.Sequence.calc_moments_btensor import calc_moments_btensor
 from pypulseq.Sequence.calc_pns import calc_pns
-from pypulseq.Sequence.ext_test_report import ext_test_report
+from pypulseq.Sequence.ext_test_report import ext_test_report, ext_test_report_data
 from pypulseq.Sequence.install import detect_scanner
 from pypulseq.Sequence.read_seq import read
 from pypulseq.Sequence.write_seq import write as write_seq
@@ -90,6 +92,8 @@ class Sequence:
         self.set_definition('BlockDurationRaster', self.block_duration_raster)
         self.set_definition('GradientRasterTime', self.grad_raster_time)
         self.set_definition('RadiofrequencyRasterTime', self.rf_raster_time)
+        self.grad_check_data_prev = SimpleNamespace(valid_for_block_num=0, last_grad_vals=[0, 0, 0])
+        self.grad_check_data_next = SimpleNamespace(valid_for_block_num=0, first_grad_vals=[0, 0, 0])
         self.signature_type = ''
         self.signature_file = ''
         self.signature_value = ''
@@ -168,13 +172,13 @@ class Sequence:
 
         return t_adc, fp_adc
 
-    def add_block(self, *args: SimpleNamespace) -> None:
+    def add_block(self, *args: Union[SimpleNamespace, None]) -> None:
         """
         Add a new block/multiple events to the sequence.
 
         Parameters
         ----------
-        *args : SimpleNamespace
+        *args : Union[SimpleNamespace, None]
             Event objects to be added as a block to the sequence. For delays,
             use `pypulseq.make_delay()` instead of raw float values.
 
@@ -186,11 +190,18 @@ class Sequence:
         pypulseq.make_sinc_pulse : Create sinc RF pulse events
         pypulseq.make_soft_delay : Create soft delay events
         """
-        # Validate that no raw floats are passed directly by users
+        # Remove None values from args
+        args = tuple(a for a in args if a is not None)
+
+        # If no args remain, return without doing anything
+        if not args:
+            return
+
+        # Validate that no raw numeric values are passed directly by users
         for arg in args:
-            if isinstance(arg, float):
+            if isinstance(arg, numbers.Real):
                 raise ValueError(
-                    f'Raw float values are not allowed in add_block(). Use pp.make_delay({arg}) for delays.'
+                    f'Raw numeric values are not allowed in add_block(). Use pp.make_delay({arg}) for delays.'
                 )
 
         if trace_enabled():
@@ -511,6 +522,167 @@ class Sequence:
         )
         return self.calculate_kspace(trajectory_delay, gradient_offset)
 
+    def calc_rf_power(
+        self,
+        time_range: Union[Tuple[float, float], List[float], None] = None,
+        block_range: Union[Tuple[int, int], List[int], None] = None,
+        window_duration: Union[float, None] = None,
+        dt: Union[float, None] = 1e-6,
+    ) -> Tuple[float, float, float, float]:
+        """
+        Calculate the relative RF power of a sequence.
+
+        Aggregates RF power metrics over the RF events contained in the sequence blocks. The calculation can optionally be
+        restricted to a subset of the sequence, either as a time interval in seconds (`time_range`) or as a range of 1-based
+        block indices (`block_range`, equivalent to the 'blockRange' option of `Sequence.calcRfPower` in MATLAB Pulseq). With
+        `window_duration`, worst-case metrics over a sliding time window are computed instead.
+
+        Returns relative RF energy, mean power, peak power, and RMS B1 amplitude.
+
+        Parameters
+        ----------
+        time_range : tuple or list of float, optional
+            Time interval (start, end) in seconds over which RF power is evaluated. Blocks that only partially overlap with the
+            interval contribute their RF energy scaled by the fraction of the block inside the interval. Mutually exclusive with
+            `block_range`. Default: the entire sequence.
+        block_range : tuple or list of int, optional
+            1-based block index interval (start, end), both inclusive; `end` may be `numpy.inf` to select all remaining blocks.
+            Only whole blocks are counted, like in MATLAB Pulseq. Mutually exclusive with `time_range`. Default: all blocks.
+        window_duration : float or None, default=None
+            If provided and finite, computes the maximum RF energy, mean power, and RMS amplitude over any sliding window of
+            this duration (in seconds). The window boundaries are rounded up to a whole number of blocks, while `mean_pwr` and
+            `rf_rms` are divided by the nominal `window_duration`, which may lead to a slight overestimation (as in MATLAB
+            Pulseq). This mimics SAR-style worst-case windowing.
+        dt : float or None, default=1e-6
+            Resampling step in s passed to `calc_rf_power`. See `pypulseq.calc_rf_power` for details.
+
+        Returns
+        -------
+        mean_pwr : float
+            Mean RF power in Hz**2 over the specified range or window.
+        peak_pwr : float
+            Peak RF power in Hz**2.
+        rf_rms : float
+            RMS B1 amplitude in Hz.
+        total_energy : float
+            Total RF energy in Hz (= Hz**2 * s).
+
+        Notes
+        -----
+        The power and RF amplitude calculated by this function are relative, as they are expressed in units of Hz**2 or Hz.
+        The RF amplitude can be converted to Tesla by dividing the resulting value by gamma. Correspondingly, the power can
+        be converted to mT**2 * s by dividing the given value by gamma**2.
+
+        Absolute SAR depends on the electric field distribution and therefore on both the transmit coil design and
+        subject-specific loading. As a result, these values must be scaled by appropriate coil- and subject-dependent
+        factors to obtain absolute SAR.
+        """
+        if time_range is not None and block_range is not None:
+            raise ValueError('Specify either time_range or block_range, not both.')
+
+        numeric = (int, float, np.integer, np.floating)
+
+        if time_range is not None and (
+            not isinstance(time_range, (tuple, list))
+            or len(time_range) != 2
+            or not all(isinstance(x, numeric) for x in time_range)
+            or time_range[0] > time_range[1]
+        ):
+            raise ValueError('time_range must be a pair (start, end) of times in seconds with start <= end.')
+
+        if block_range is None:
+            block_start, block_end = 1, np.inf
+        elif (
+            not isinstance(block_range, (tuple, list))
+            or len(block_range) != 2
+            or not all(isinstance(x, numeric) for x in block_range)
+        ):
+            raise ValueError('block_range must be a pair (start, end) of 1-based block indices.')
+        else:
+            block_start = int(block_range[0])
+            block_end = int(block_range[1]) if np.isfinite(block_range[1]) else len(self.block_events)
+            if block_start < 1 or block_start > block_end or block_end > len(self.block_events):
+                raise ValueError(
+                    f'Invalid block_range {tuple(block_range)}: must satisfy 1 <= start <= end <= '
+                    f'{len(self.block_events)} (number of blocks).'
+                )
+
+        window_on = window_duration is not None and np.isfinite(window_duration)
+        if window_on:
+            if window_duration <= 0:
+                raise ValueError('window_duration must be > 0.')
+            # (energy, rf_ms, duration) contribution of each block inside the window
+            bookkeeping = []
+            current_window_dur = 0.0
+            current_window_start = 0
+            total_energy_max = 0.0
+            rf_ms_max = 0.0
+
+        t0 = 0.0
+        dur = 0.0
+        total_energy = 0.0
+        peak_pwr = 0.0
+        rf_ms = 0.0  # sum of rms^2 * duration, i.e. the integrated squared RF amplitude
+        for block_pos, block_counter in enumerate(self.block_events):
+            block_duration = self.block_durations[block_counter]
+
+            if time_range is not None:
+                # fraction of the block overlapping with time_range
+                contrib_dur = max(0.0, min(t0 + block_duration, time_range[1]) - max(t0, time_range[0]))
+            elif block_start <= block_pos + 1 <= block_end:
+                contrib_dur = block_duration
+            else:
+                contrib_dur = 0.0
+
+            # Update current position
+            t0 += block_duration
+
+            if contrib_dur <= 0:
+                continue
+            dur += contrib_dur
+            frac = contrib_dur / block_duration  # == 1 unless restricted by time_range
+
+            block = self.get_block(block_counter)
+
+            block_energy = 0.0
+            block_ms = 0.0
+            if block.rf is not None:
+                energy, peak, rms = calc_rf_power(block.rf, dt=dt)
+                block_energy = energy * frac
+                block_ms = rms**2 * block.rf.shape_dur * frac
+                total_energy += block_energy
+                rf_ms += block_ms
+                peak_pwr = max(peak_pwr, peak)
+
+                if window_on:
+                    # compare against the max before trimming the window back
+                    # below window_duration: the window is effectively rounded
+                    # up to a whole number of blocks (as in MATLAB Pulseq)
+                    total_energy_max = max(total_energy_max, total_energy)
+                    rf_ms_max = max(rf_ms_max, rf_ms)
+
+            # keep track of the window width and shorten it if needed
+            if window_on:
+                bookkeeping.append((block_energy, block_ms, contrib_dur))
+                current_window_dur += contrib_dur
+                while current_window_dur > window_duration:
+                    e0, ms0, d0 = bookkeeping[current_window_start]
+                    total_energy -= e0
+                    rf_ms -= ms0
+                    current_window_dur -= d0
+                    current_window_start += 1
+
+        if window_on:
+            total_energy = total_energy_max
+            # we divide here by the nominal window duration, which may lead to a slight overestimation
+            mean_pwr = total_energy / window_duration
+            rf_rms = np.sqrt(rf_ms_max / window_duration)
+        else:
+            mean_pwr = total_energy / dur if dur > 0 else np.nan
+            rf_rms = np.sqrt(rf_ms / dur) if dur > 0 else np.nan
+
+        return mean_pwr, peak_pwr, rf_rms, total_energy
+
     def calculate_pns(
         self,
         hardware: SimpleNamespace,
@@ -548,9 +720,21 @@ class Sequence:
         """
         return calc_pns(self, hardware, time_range=time_range, do_plots=do_plots)
 
-    def check_timing(self, print_errors=False) -> Tuple[bool, List[SimpleNamespace]]:
+    def check_timing(
+        self,
+        print_errors: bool = False,
+        max_errors: Union[int, None] = None,
+    ) -> Tuple[bool, List[SimpleNamespace]]:
         """
         Checks timing of all blocks and objects in the sequence optionally returns the detailed error log.
+
+        Parameters
+        ----------
+        print_errors : bool, optional
+            If True, print the error report to stdout. Default is False.
+        max_errors : int or None, optional
+            Maximum number of errors to report when print_errors is True.
+            If None, all errors are reported. Default is None.
 
         Returns
         -------
@@ -562,7 +746,10 @@ class Sequence:
         is_ok, error_report = ext_check_timing(self)
 
         if not is_ok and print_errors:
-            print_error_report(self, error_report)
+            if max_errors is None:
+                print_error_report(self, error_report, full_report=True)
+            else:
+                print_error_report(self, error_report, max_errors=max_errors)
 
         return is_ok, error_report
 
@@ -770,7 +957,7 @@ class Sequence:
         else:
             return ''
 
-    def get_extension_type_ID(self, extension_string: str) -> int:
+    def get_extension_type_ID(self, extension_string: str, update: bool = True) -> int:
         """
         Get numeric extension ID for `extension_string`. Will automatically create a new ID if unknown.
 
@@ -778,6 +965,8 @@ class Sequence:
         ----------
         extension_string : str
             Given string extension ID.
+        update : bool, default=True
+            If string is not found and update is true, update extension map.
 
         Returns
         -------
@@ -791,9 +980,11 @@ class Sequence:
             else:
                 extension_id = 1 + max(self.extension_numeric_idx)
 
-            self.extension_numeric_idx.append(extension_id)
-            self.extension_string_idx.append(extension_string)
-            assert len(self.extension_numeric_idx) == len(self.extension_string_idx)
+            if update:
+                self.extension_numeric_idx.append(extension_id)
+                self.extension_string_idx.append(extension_string)
+                if len(self.extension_numeric_idx) != len(self.extension_string_idx):
+                    raise ValueError('Length of extension numeric ID and extension string do not match')
         else:
             num = self.extension_string_idx.index(extension_string)
             extension_id = self.extension_numeric_idx[num]
@@ -868,14 +1059,14 @@ class Sequence:
         ng = len(gw_data)
 
         # Gradient delay handling
-        if isinstance(trajectory_delay, (int, float)):
+        if isinstance(trajectory_delay, numbers.Real):
             gradient_delays = [trajectory_delay] * ng
         else:
             assert len(trajectory_delay) == ng  # Need to have same number of gradient channels
             gradient_delays = trajectory_delay
 
         # Gradient offset handling
-        if isinstance(gradient_offset, (int, float)):
+        if isinstance(gradient_offset, numbers.Real):
             gradient_offset = [gradient_offset] * ng
         else:
             assert len(gradient_offset) == ng  # Need to have same number of gradient channels
@@ -1050,7 +1241,7 @@ class Sequence:
         gx_color: str = 'blue',
         gy_color: str = 'red',
         gz_color: Tuple[float] = (0, 0.5, 0.3),
-        rf_plot: str = 'abs',
+        rf_plot: Literal['abs', 'real', 'imag'] = 'abs',
     ):
         """
         Plot sequence using paper-style formatting (minimalist, high-contrast layout).
@@ -1073,7 +1264,9 @@ class Sequence:
         gz_color : color, default=(0, 0.5, 0.3)
             Color for gradient Z waveform.
         rf_plot : {'abs', 'real', 'imag'}, default='abs'
-            Determines how to plot RF waveforms (magnitude, real or imaginary part).
+            Determines how to plot the RF waveforms.
+            If 'abs', plots magnitude for all RF events.
+            If 'real' or 'imag', plots the respective component for all RF events.
 
         """
         ext_paper_plot(self, time_range, line_width, axes_color, rf_color, gx_color, gy_color, gz_color, rf_plot)
@@ -1091,6 +1284,7 @@ class Sequence:
         overlay: SeqPlot = None,
         stacked: bool = False,
         show_guides: bool = False,
+        rf_plot: Literal['auto', 'abs', 'real', 'imag'] = 'auto',
     ) -> SeqPlot:
         """
         Plot `Sequence`.
@@ -1124,6 +1318,11 @@ class Sequence:
             If False, use separate figures for RF/ADC and gradients.
         show_guides : bool, default=False
             If True, enable dynamic vertical hairline guides that follow the cursor. Requires `mplcursors`.
+        rf_plot : {'auto', 'abs', 'real', 'imag'}, default='auto'
+            Determines how to plot the RF waveforms.
+            If 'auto', plots magnitude for all RF events except those that are purely real or imaginary, which are plotted as such.
+            If 'abs', plots magnitude for all RF events.
+            If 'real' or 'imag', plots the respective component for all RF events.
 
         Returns
         -------
@@ -1143,6 +1342,7 @@ class Sequence:
             overlay,
             stacked,
             show_guides,
+            rf_plot=rf_plot,
         )
 
     def read(self, file_path: str, detect_rf_use: bool = False, remove_duplicates: bool = True) -> None:
@@ -1151,9 +1351,10 @@ class Sequence:
 
         Parameters
         ----------
-        detect_rf_use
         file_path : str
             Path to `.seq` file to be read.
+        detect_rf_use : bool, default=False
+            If True, try to infer intended use of the RF pulses if `use` attributes are not set.
         remove_duplicates : bool, default=True
             Remove duplicate events from the sequence after reading.
         """
@@ -1213,7 +1414,9 @@ class Sequence:
         for grad_id in seq_copy.grad_library.data:
             if seq_copy.grad_library.type[grad_id] == 'g':
                 data = seq_copy.grad_library.data[grad_id]
-                new_data = (*data[0:3], mapping[data[3]], mapping[data[4]], data[5])
+                # Time shape ID -1 marks oversampling (no shape library entry) and must not be remapped
+                time_id = mapping[data[4]] if data[4] > 0 else data[4]
+                new_data = (*data[0:3], mapping[data[3]], time_id, data[5])
                 if data != new_data:
                     seq_copy.grad_library.update(grad_id, None, new_data)
 
@@ -1366,7 +1569,7 @@ class Sequence:
 
                 full_freq_offset = rf.freq_offset + rf.freq_ppm * 1e-6 * self.system.gamma * self.system.B0
                 full_phase_offset = rf.phase_offset + rf.phase_ppm * 1e-6 * self.system.gamma * self.system.B0
-                full_phase_offset = full_phase_offset + 2 * math.pi * full_freq_offset * tc
+                full_phase_offset += 2 * math.pi * full_freq_offset * tc
 
                 if not hasattr(rf, 'use') or block.rf.use in [
                     'excitation',
@@ -1574,6 +1777,37 @@ class Sequence:
         Analyze the sequence and return a text report.
         """
         return ext_test_report(self)
+
+    def test_report_dict(self) -> dict:
+        """
+        Analyze the sequence and return statistics as a dictionary.
+
+        This method provides programmatic access to sequence statistics without
+        needing to parse the formatted string output of test_report().
+
+        Returns
+        -------
+        data : dict
+            Dictionary containing sequence statistics with the following keys:
+            - num_blocks: int
+            - event_count: dict with keys 'rf', 'gx', 'gy', 'gz', 'adc', 'delay'
+            - duration: float (seconds)
+            - TE: float (seconds)
+            - TR: float (seconds)
+            - flip_angles_deg: list of float
+            - unique_k_positions: np.ndarray
+            - dimensions: int (if applicable)
+            - spatial_resolution_mm: list of float (if applicable)
+            - repetitions: dict with 'median', 'min', 'max' (if applicable)
+            - is_cartesian: bool (if applicable)
+            - max_gradient: dict with 'per_channel_Hz_m', 'per_channel_mT_m',
+              'absolute_Hz_m', 'absolute_mT_m'
+            - max_slew_rate: dict with 'per_channel_Hz_m_s', 'per_channel_T_m_s',
+              'absolute_Hz_m_s', 'absolute_T_m_s'
+            - timing_ok: bool
+            - timing_error_report: list
+        """
+        return ext_test_report_data(self)
 
     def waveforms(self, append_RF: bool = False, time_range: Union[List[float], None] = None) -> Tuple[np.ndarray]:
         """

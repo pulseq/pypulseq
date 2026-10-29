@@ -91,7 +91,7 @@ def test_soft_delay_validation():
         pp.make_soft_delay('T E', default_duration=5e-3)
 
     # Test non-string hint
-    with pytest.raises(TypeError, match="'int' object is not iterable"):
+    with pytest.raises(TypeError, match="Parameter 'hint' must be a string"):
         pp.make_soft_delay(123, default_duration=5e-3)
 
     # Test zero factor
@@ -105,6 +105,22 @@ def test_soft_delay_validation():
     # Test invalid numID
     with pytest.raises(ValueError, match="Parameter 'numID' must be a non-negative integer or None"):
         pp.make_soft_delay('TE', numID=-1, default_duration=5e-3)
+
+    # Test bool numID (bools are ints but not valid numIDs)
+    with pytest.raises(ValueError, match="Parameter 'numID' must be a non-negative integer or None"):
+        pp.make_soft_delay('TE', numID=True, default_duration=5e-3)
+
+    # Test non-finite offset
+    with pytest.raises(ValueError, match="Parameter 'offset' must be finite"):
+        pp.make_soft_delay('TE', offset=float('nan'), default_duration=5e-3)
+
+    # Test non-finite factor
+    with pytest.raises(ValueError, match="Parameter 'factor' must be finite"):
+        pp.make_soft_delay('TE', factor=float('inf'), default_duration=5e-3)
+
+    # Test non-finite default_duration
+    with pytest.raises(ValueError, match='Default duration must be greater than 0'):
+        pp.make_soft_delay('TE', default_duration=float('inf'))
 
 
 def test_soft_delay_hint_consistency():
@@ -181,7 +197,7 @@ def test_raw_float_rejection():
     # Test that raw floats are rejected
     with pytest.raises(
         ValueError,
-        match=r'Raw float values are not allowed in add_block\(\)\. Use pp.make_delay\(0.001\) for delays\.',
+        match=r'Raw numeric values are not allowed in add_block\(\)\. Use pp.make_delay\(0.001\) for delays\.',
     ):
         seq.add_block(1e-3)
 

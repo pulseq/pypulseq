@@ -41,28 +41,30 @@ def make_arbitrary_rf(
     signal : numpy.ndarray
         Arbitrary waveform.
     flip_angle : float
-        Flip angle in radians.
+        Flip angle in radians (rad).
     bandwidth : float, default=0
-        Bandwidth in Hertz (Hz).
+        Bandwidth in hertz (Hz).
     delay : float, default=0
-        Delay in seconds (s) of accompanying slice select trapezoidal event.
+        Delay in seconds (s) of the radio-frequency pulse event.
     dwell : float, default=0
-        Temporal sampling step of waveform. If set to 0, will use `system.rf_raster_time`.
+        Temporal sampling step of waveform in seconds (s). If set to 0, will use `system.rf_raster_time`.
     freq_offset : float, default=0
-        Frequency offset in Hertz (Hz).
+        Frequency offset in hertz (Hz).
     no_signal_scaling : bool, default=False
         If set to True no rescaling of the RF amplitude will happen. E.g. for adiabatic pulses.
-    max_grad : float, default=system.max_grad
-        Maximum gradient strength of accompanying slice select trapezoidal event.
-    max_slew : float, default=system.max_slew
-        Maximum slew rate of accompanying slice select trapezoidal event.
+    max_grad : float, default=0
+        Maximum gradient strength (Hz/m) of accompanying slice select trapezoidal event.
+        If <= 0, `system.max_grad` is used.
+    max_slew : float, default=0
+        Maximum slew rate (Hz/m/s) of accompanying slice select trapezoidal event.
+        If <= 0, `system.max_slew` is used.
     phase_offset : float, default=0
-        Phase offset in Hertz (Hz).a
+        Phase offset in radians (rad).
     return_gz : bool, default=False
         Boolean flag to indicate if slice-selective gradient has to be returned.
     slice_thickness : float, default=0
-        Slice thickness (m) of accompanying slice select trapezoidal event. The slice thickness determines the area of the
-        slice select event.
+        Slice thickness (m) of accompanying slice select trapezoidal event.
+        The slice thickness determines the area of the slice select event.
     system : Opts, default=Opts()
         System limits.
     time_bw_product : float, default=0
@@ -72,11 +74,11 @@ def make_arbitrary_rf(
         Must be one of 'excitation', 'refocusing', 'inversion',
         'saturation', 'preparation', 'other', 'undefined'.
     freq_ppm : float, default=0
-        PPM frequency offset.
+        PPM frequency offset in parts per million (ppm).
     phase_ppm : float, default=0
-        PPM phase offset.
+        PPM phase offset in radians per megahertz (rad/MHz).
     center : float, default=None
-        RF center (s).
+        RF center in seconds (s).
 
     Returns
     -------
@@ -89,7 +91,8 @@ def make_arbitrary_rf(
     ------
     ValueError
         If invalid `use` parameter is passed.
-        If `signal` with ndim > 1 is passed.
+        If `signal` is not a non-empty 1-D array.
+        If `dwell`, `delay` or `time_bw_product` is negative or not finite.
         If `return_gz=True`, and `slice_thickness` and `bandwidth` are not passed.
     """
     if system is None:
@@ -99,12 +102,23 @@ def make_arbitrary_rf(
     if use != '' and use not in valid_pulse_uses:
         raise ValueError(f'Invalid use parameter. Must be one of {valid_pulse_uses}. Passed: {use}')
 
+    if not np.isfinite(dwell) or dwell < 0:
+        raise ValueError('Dwell must be non-negative.')
+
+    if not np.isfinite(delay) or delay < 0:
+        raise ValueError('Delay must be non-negative.')
+
+    if not np.isfinite(time_bw_product) or time_bw_product < 0:
+        raise ValueError('time_bw_product must be non-negative.')
+
     if dwell == 0:
         dwell = system.rf_raster_time
 
-    signal = np.squeeze(signal)
-    if signal.ndim > 1:
+    signal = np.atleast_1d(np.squeeze(np.asarray(signal)))
+    if signal.ndim != 1:
         raise ValueError(f'signal should have ndim=1. Passed ndim={signal.ndim}')
+    if signal.size == 0:
+        raise ValueError('signal must not be empty.')
 
     if not no_signal_scaling:
         signal = signal / np.abs(np.sum(signal * dwell)) * flip_angle / (2 * np.pi)
@@ -144,9 +158,9 @@ def make_arbitrary_rf(
         rf.center, _ = calc_rf_center(rf)
 
     if return_gz:
-        if slice_thickness <= 0:
+        if not np.isfinite(slice_thickness) or slice_thickness <= 0:
             raise ValueError('Slice thickness must be provided.')
-        if bandwidth <= 0:
+        if not np.isfinite(bandwidth) or bandwidth <= 0:
             raise ValueError('Bandwidth of pulse must be provided.')
 
         if max_grad > 0:

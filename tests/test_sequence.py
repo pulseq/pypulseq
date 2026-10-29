@@ -9,8 +9,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pypulseq as pp
 import pytest
-from _pytest.python_api import ApproxBase
 from pypulseq import Sequence
+
+if hasattr(pytest, 'Approx'):
+    ApproxBase = pytest.Approx  # public since pytest 9.2
+else:
+    from _pytest.python_api import ApproxBase  # older pytest
 
 expected_output_path = Path(__file__).parent / 'expected_output'
 
@@ -20,6 +24,9 @@ class Approx(ApproxBase):
     Extension of pytest.approx that also handles approximate equality
     recursively within dicts, lists, tuples, and SimpleNamespace
     """
+
+    def __init__(self, expected, rel=None, abs=None, nan_ok=False):  # noqa: A002
+        super().__init__(expected, rel=rel, abs=abs, nan_ok=nan_ok)
 
     def __repr__(self):
         return str(self.expected)
@@ -45,6 +52,8 @@ class Approx(ApproxBase):
             return True
         elif isinstance(self.expected, SimpleNamespace):
             return actual.__dict__ == Approx(self.expected.__dict__, rel=self.rel, abs=self.abs, nan_ok=self.nan_ok)
+        elif isinstance(self.expected, (str, bytes, bool, type(None))):
+            return actual == self.expected
         else:
             return actual == pytest.approx(self.expected, rel=self.rel, abs=self.abs, nan_ok=self.nan_ok)
 
@@ -76,6 +85,8 @@ class Approx(ApproxBase):
             return Approx(self.expected.__dict__, rel=self.rel, abs=self.abs, nan_ok=self.nan_ok)._repr_compare(
                 actual.__dict__
             )
+        elif isinstance(self.expected, (str, bytes, bool, type(None))):
+            return [f'Values do not match: {actual!r} != {self.expected!r}']
         else:
             return pytest.approx(self.expected, rel=self.rel, abs=self.abs, nan_ok=self.nan_ok)._repr_compare(actual)
 
@@ -253,8 +264,60 @@ def seq6():
     return seq
 
 
+# Dummy seq ending with [TRAP] section
+def seq_trap_only():
+    seq = Sequence()
+    seq.add_block(pp.make_trapezoid('x', area=1000))
+
+    return seq
+
+
+# Dummy seq ending with [ADC] section
+def seq_adc_only():
+    seq = Sequence()
+    seq.add_block(pp.make_adc(num_samples=100, duration=10e-3))
+
+    return seq
+
+
+# Dummy seq ending with [EXTENSION] section
+def seq_ext_only():
+    seq = Sequence()
+    seq.add_block(pp.make_adc(num_samples=1000, duration=1e-3), pp.make_label(label='NOISE', type='SET', value=True))
+
+    return seq
+
+
+# Dummy seq with oversampled arbitrary gradients (time shape ID -1), two of which are identical after rounding
+def seq_oversampled_grad():
+    seq = Sequence()
+    waveform = 10000 * np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 2, 1])
+    seq.add_block(pp.make_arbitrary_grad('x', waveform, first=0, last=0, oversampling=True))
+    seq.add_block(pp.make_arbitrary_grad('x', waveform * 1.0000001, first=0, last=0, oversampling=True))
+    seq.add_block(
+        pp.make_arbitrary_grad('y', -waveform, first=0, last=0, oversampling=True),
+        pp.make_arbitrary_grad('z', waveform, first=0, last=0, oversampling=True),
+    )
+
+    return seq
+
+
 # List of all sequence functions that will be tested with the test functions below.
-sequence_zoo = [seq_make_gauss_pulses, seq_make_sinc_pulses, seq_make_block_pulses, seq1, seq2, seq3, seq4, seq5, seq6]
+sequence_zoo = [
+    seq_make_gauss_pulses,
+    seq_make_sinc_pulses,
+    seq_make_block_pulses,
+    seq1,
+    seq2,
+    seq3,
+    seq4,
+    seq5,
+    seq6,
+    seq_trap_only,
+    seq_adc_only,
+    seq_ext_only,
+    seq_oversampled_grad,
+]
 
 
 # List of example sequences in pypulseq/seq_examples/scripts/ to add as
@@ -297,6 +360,42 @@ for example in seq_examples:
     sequence_zoo.append(make_test_func(example))
 
 
+def test_remove_duplicates_oversampled_grad():
+    seq = seq_oversampled_grad()
+    seq_dedup = seq.remove_duplicates()
+
+    # The oversampling sentinel time_id = -1 is not a shape library ID and must survive deduplication
+    for grad_id, data in seq_dedup.grad_library.data.items():
+        if seq_dedup.grad_library.type[grad_id] == 'g':
+            assert data[4] == -1
+
+    # Blocks 1 and 2 differ only in the 7th digit of the amplitude and must be merged into one gradient event
+    assert seq.block_events[1][2] != seq.block_events[2][2]
+    assert seq_dedup.block_events[1][2] == seq_dedup.block_events[2][2]
+    assert len(seq_dedup.grad_library.data) == len(seq.grad_library.data) - 1
+
+    # Deduplicated gradients keep their timing
+    gx = seq_dedup.get_block(1).gx
+    assert gx.shape_dur == pytest.approx(seq.get_block(1).gx.shape_dur)
+    ok, errors = seq_dedup.check_timing()
+    assert ok, errors
+
+
+def test_calculate_kspace_numpy_scalar_args():
+    # Numpy scalars are accepted for trajectory_delay and gradient_offset
+    seq = pp.Sequence()
+    seq.add_block(pp.make_trapezoid('x', area=1000, duration=1e-3))
+    seq.add_block(pp.make_delay(1e-3))
+
+    expected = seq.calculate_kspace(trajectory_delay=0, gradient_offset=0)
+    actual = seq.calculate_kspace(trajectory_delay=np.int64(0), gradient_offset=np.int32(0))
+    for a, b in zip(actual, expected):
+        if isinstance(a, np.ndarray):
+            np.testing.assert_allclose(a, b)
+        else:
+            assert a == b
+
+
 # Main Sequence test class
 # Note that pytest creates a new instance of the TestSequence class for each
 # test. To prevent calling seq_func() over and over, we assign it as a class
@@ -337,6 +436,52 @@ class TestSequence:
             report = TestSequence.seq.test_report()
             assert isinstance(report, str), 'test_report() did not return a string'
             assert len(report) > 0, 'test_report() returned an empty string'
+
+    # Test sequence.test_report_dict() method
+    def test_test_report_dict(self, seq_func):
+        if seq_func.__name__ in seq_examples or seq_func.__name__ in ['seq2', 'seq3', 'seq4', 'seq5', 'seq6']:
+            data = TestSequence.seq.test_report_dict()
+
+            # Check return type
+            assert isinstance(data, dict), 'test_report_dict() did not return a dict'
+
+            # Check required keys exist
+            required_keys = [
+                'num_blocks',
+                'event_count',
+                'duration',
+                'TE',
+                'TR',
+                'flip_angles_deg',
+                'unique_k_positions',
+                'max_gradient',
+                'max_slew_rate',
+                'timing_ok',
+                'timing_error_report',
+            ]
+            for key in required_keys:
+                assert key in data, f'test_report_dict() missing required key: {key}'
+
+            # Check event_count structure
+            assert isinstance(data['event_count'], dict), 'event_count should be a dict'
+            for event_key in ['rf', 'gx', 'gy', 'gz', 'adc', 'delay']:
+                assert event_key in data['event_count'], f'event_count missing key: {event_key}'
+
+            # Check max_gradient structure
+            assert isinstance(data['max_gradient'], dict), 'max_gradient should be a dict'
+            for grad_key in ['per_channel_Hz_m', 'per_channel_mT_m', 'absolute_Hz_m', 'absolute_mT_m']:
+                assert grad_key in data['max_gradient'], f'max_gradient missing key: {grad_key}'
+
+            # Check max_slew_rate structure
+            assert isinstance(data['max_slew_rate'], dict), 'max_slew_rate should be a dict'
+            for slew_key in ['per_channel_Hz_m_s', 'per_channel_T_m_s', 'absolute_Hz_m_s', 'absolute_T_m_s']:
+                assert slew_key in data['max_slew_rate'], f'max_slew_rate missing key: {slew_key}'
+
+            # Check types of key values
+            assert isinstance(data['num_blocks'], int), 'num_blocks should be an int'
+            assert isinstance(data['duration'], (int, float)), 'duration should be numeric'
+            assert isinstance(data['timing_ok'], bool), 'timing_ok should be a bool'
+            assert isinstance(data['timing_error_report'], list), 'timing_error_report should be a list'
 
     # Test whether the sequence is the approximately the same after writing a .seq
     # file and reading it back in.
@@ -409,8 +554,27 @@ class TestSequence:
         for label in labels_seq:
             assert (labels_seq[label] == labels_seq2[label]).all(), f'Label {label} does not match'
 
+    def test_writeread_no_signature(self, seq_func, tmp_path):
+        seq_name = str(seq_func.__name__)
+        output_filename = tmp_path / (seq_name + '.seq')
+
+        seq = TestSequence.seq
+
+        # Write sequence to file
+        seq.write(output_filename, create_signature=False)
+
+        # Read written sequence file back in
+        seq2 = pp.Sequence(system=seq.system)
+        seq2.read(output_filename)
+
+        # Clean up written sequence file
+        output_filename.unlink()
+
+        assert len(seq2.block_events) == len(seq.block_events)
+
     def test_writeread_v141(self, seq_func, tmp_path):
-        if seq_func.__name__ not in ['seq6', 'write_gre_label_softdelay']:  # soft delay not supported in v141
+        # soft delays (seq6, write_gre_label_softdelay) and oversampled gradients (seq_oversampled_grad) are not supported in v141
+        if seq_func.__name__ not in ['seq6', 'write_gre_label_softdelay', 'seq_oversampled_grad']:
             seq_name = str(seq_func.__name__)
             output_filename = tmp_path / (seq_name + '.seq')
 

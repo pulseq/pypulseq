@@ -43,31 +43,34 @@ def make_gauss_pulse(
     Parameters
     ----------
     flip_angle : float
-        Flip angle in radians.
+        Flip angle in radians (rad).
     apodization : float, default=0
-        Apodization.
+        Apodization factor, must be in the range [0, 1].
     bandwidth : float, default=0
-        Bandwidth in Hertz (Hz).
+        Bandwidth in hertz (Hz). If set to 0, will be derived from `time_bw_product`.
     center_pos : float, default=0.5
-        Position of peak.
+        Position of RF peak between 0 and 1, where 0 means the
+        beginning of the pulse and 1 means the end of the pulse.
     delay : float, default=0
         Delay in seconds (s).
     dwell : float, default=0
+        Temporal sampling step of waveform in seconds (s).
+        If set to 0, will use `system.rf_raster_time`.
     duration : float, default=4e-3
         Duration in seconds (s).
     freq_offset : float, default=0
-        Frequency offset in Hertz (Hz).
+        Frequency offset in hertz (Hz).
     max_grad : float, default=0
-        Maximum gradient strength of accompanying slice select trapezoidal event.
+        Maximum gradient strength (Hz/m) of accompanying slice select trapezoidal event.
     max_slew : float, default=0
-        Maximum slew rate of accompanying slice select trapezoidal event.
+        Maximum slew rate (Hz/m/s) of accompanying slice select trapezoidal event.
     phase_offset : float, default=0
-        Phase offset in Hertz (Hz).
+        Phase offset in radians (rad).
     return_gz : bool, default=False
         Boolean flag to indicate if the slice-selective gradient has to be returned.
     slice_thickness : float, default=0
-        Slice thickness of accompanying slice select trapezoidal event. The slice thickness determines the area of the
-        slice select event.
+        Slice thickness in meters (m) of accompanying slice select trapezoidal event.
+        The slice thickness determines the area of the slice select event.
     system : Opts, default=Opts()
         System limits.
     time_bw_product : float, default=4.0
@@ -77,9 +80,9 @@ def make_gauss_pulse(
         Must be one of 'excitation', 'refocusing', 'inversion',
         'saturation', 'preparation', 'other', 'undefined'.
     freq_ppm : float, default=0
-        PPM frequency offset.
+        PPM frequency offset in parts per million (ppm).
     phase_ppm : float, default=0
-        PPM phase offset.
+        PPM phase offset in radians per megahertz (rad/MHz).
 
     Returns
     -------
@@ -94,6 +97,10 @@ def make_gauss_pulse(
     ------
     ValueError
         If invalid `use` is passed.
+        If `duration` is not positive or not finite.
+        If `dwell` or `delay` is negative or not finite.
+        If `center_pos` or `apodization` is not in the range [0, 1].
+        If `bandwidth` is negative, or `time_bw_product` is not positive and `bandwidth` is not provided.
         If `return_gz=True` and `slice_thickness` was not passed.
     """
     if system is None:
@@ -103,13 +110,31 @@ def make_gauss_pulse(
     if use != '' and use not in valid_pulse_uses:
         raise ValueError(f'Invalid use parameter. Must be one of {valid_pulse_uses}. Passed: {use}')
 
+    if not np.isfinite(duration) or duration <= 0:
+        raise ValueError('RF pulse duration must be positive.')
+
+    if not np.isfinite(dwell) or dwell < 0:
+        raise ValueError('Dwell must be non-negative.')
+
+    if not np.isfinite(delay) or delay < 0:
+        raise ValueError('Delay must be non-negative.')
+
+    if not np.isfinite(center_pos) or not 0 <= center_pos <= 1:
+        raise ValueError('center_pos must be in the range [0, 1].')
+
+    if not np.isfinite(apodization) or not 0 <= apodization <= 1:
+        raise ValueError('apodization must be in the range [0, 1].')
+
+    if not np.isfinite(bandwidth) or bandwidth < 0:
+        raise ValueError('Bandwidth must be non-negative.')
+
     if dwell == 0:
         dwell = system.rf_raster_time
 
     if bandwidth == 0:
+        if not np.isfinite(time_bw_product) or time_bw_product <= 0:
+            raise ValueError('time_bw_product must be positive if `bandwidth` is not provided.')
         bandwidth = time_bw_product / duration
-    else:
-        bandwidth = bandwidth
     alpha = apodization
     n_samples = round(duration / dwell)
     t = (np.arange(1, n_samples + 1) - 0.5) * dwell
@@ -135,16 +160,9 @@ def make_gauss_pulse(
     if use != '':
         rf.use = use
 
-    if rf.dead_time > rf.delay:
-        warn(
-            f'Specified RF delay {rf.delay * 1e6:.2f} us is less than the dead time {rf.dead_time * 1e6:.0f} us. Delay was increased to the dead time.',
-            stacklevel=2,
-        )
-        rf.delay = rf.dead_time
-
     if return_gz:
-        if slice_thickness == 0:
-            raise ValueError('Slice thickness must be provided')
+        if not np.isfinite(slice_thickness) or slice_thickness <= 0:
+            raise ValueError('Slice thickness must be provided if return_gz is True')
 
         if max_grad > 0:
             system = copy(system)
@@ -156,18 +174,41 @@ def make_gauss_pulse(
 
         amplitude = bandwidth / slice_thickness
         area = amplitude * duration
-        gz = make_trapezoid(channel='z', system=system, flat_time=duration, flat_area=area)
+        # create slice selection gradient
+        gz = make_trapezoid(
+            channel='z',
+            system=system,
+            flat_time=duration,
+            flat_area=area,
+        )
+        # create slice selection rephasing gradient
         gzr = make_trapezoid(
             channel='z',
             system=system,
             area=-area * (1 - center_pos) - 0.5 * (gz.area - area),
         )
 
+        # if RF delay > gradient risetime, delay the gradient
         if rf.delay > gz.rise_time:
             gz.delay = math.ceil((rf.delay - gz.rise_time) / system.grad_raster_time) * system.grad_raster_time
 
+        # if RF delay < gradient risetime + gradient delay, adjust RF delay
         if rf.delay < (gz.rise_time + gz.delay):
             rf.delay = gz.rise_time + gz.delay
+
+        # ensure RF delay is at least RF dead time and adjust gradient delay accordingly
+        if rf.delay < rf.dead_time:
+            additional_delay = rf.dead_time - rf.delay
+            rf.delay = rf.dead_time
+            gz.delay = gz.delay + additional_delay
+
+    else:
+        if rf.delay < rf.dead_time:
+            warn(
+                f'Specified RF delay {rf.delay * 1e6:.2f} us is less than RF dead time {rf.dead_time * 1e6:.0f} us. Delay was increased to the dead time.',
+                stacklevel=2,
+            )
+            rf.delay = rf.dead_time
 
     # Following 2 lines of code are workarounds for numpy returning 3.14... for np.angle(-0.00...)
     negative_zero_indices = np.where(rf.signal == -0.0)

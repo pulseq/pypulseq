@@ -34,20 +34,22 @@ def make_extended_trapezoid(
     ----------
     channel : str
         Orientation of extended trapezoidal gradient event. Must be one of 'x', 'y' or 'z'.
+    amplitudes : numpy.ndarray, default=None
+        Gradient values (Hz/m) defined at `times` time indices.
     convert_to_arbitrary : bool, default=False
         Boolean flag to indicate if the extended trapezoid gradient has to be converted into an arbitrary gradient.
-    amplitudes : numpy.ndarray, default=09
-        Values defined at `times` time indices.
     max_grad : float, default=0
-        Maximum gradient strength.
+        Maximum gradient strength (Hz/m).
+        Will default to `system.max_grad` if not provided or <= 0.
     max_slew : float, default=0
-        Maximum slew rate.
-    system : Opts, default=Opts()
-        System limits.
+        Maximum slew rate (Hz/m/s).
+        Will default to `system.max_slew` if not provided or <= 0.
     skip_check : bool, default=False
         Boolean flag to indicate if amplitude check is to be skipped.
-    times : numpy.ndarray, default=np.zeros(1)
-        Time points at which `amplitudes` defines amplitude values.
+    system : Opts, default=Opts()
+        System limits.
+    times : numpy.ndarray, default=None
+        Time points (s) at which `amplitudes` defines amplitude values.
 
     Returns
     -------
@@ -58,10 +60,15 @@ def make_extended_trapezoid(
     ------
     ValueError
         If invalid `channel` is passed. Must be one of 'x', 'y' or 'z'.
+        If `times` and `amplitudes` do not have the same length.
+        If fewer than two time points are provided.
         If all elements in `times` are zero.
-        If elements in `times` are not in ascending order or not distinct.
-        If all elements in `amplitudes` are zero.
-        If first amplitude of a gradient is non-ero and does not connect to a previous block.
+        If elements in `times` are not finite, not in ascending order or not distinct.
+        If the first element in `times` is negative.
+        If the last time point is not on the gradient raster.
+        If first amplitude of a gradient is non-zero and does not connect to a previous block.
+        If `amplitudes` contains non-finite values.
+        If slew rate or gradient amplitude is violated.
     """
     if amplitudes is None:
         amplitudes = np.zeros(1)
@@ -81,11 +88,23 @@ def make_extended_trapezoid(
     if len(times) != len(amplitudes):
         raise ValueError('Times and amplitudes must have the same length.')
 
+    if len(times) < 2:
+        raise ValueError('At least two time points are required.')
+
+    if not np.all(np.isfinite(times)):
+        raise ValueError('All elements of `times` must be finite.')
+
+    if not np.all(np.isfinite(amplitudes)):
+        raise ValueError('All elements of `amplitudes` must be finite.')
+
     if np.all(times == 0):
         raise ValueError('At least one of the given times must be non-zero')
 
     if np.any(np.diff(times) <= 0):
         raise ValueError('Times must be in ascending order and all times must be distinct')
+
+    if times[0] < 0:
+        raise ValueError('The first time point must be non-negative.')
 
     if abs(round(times[-1] / system.grad_raster_time) * system.grad_raster_time - times[-1]) > eps:
         raise ValueError('The last time point must be on a gradient raster')
@@ -93,10 +112,10 @@ def make_extended_trapezoid(
     if skip_check is False and times[0] > 0 and amplitudes[0] != 0:
         raise ValueError('If first amplitude of a gradient is non-zero, it must connect to previous block')
 
-    if max_grad <= 0:
+    if not np.isfinite(max_grad) or max_grad <= 0:
         max_grad = system.max_grad
 
-    if max_slew <= 0:
+    if not np.isfinite(max_slew) or max_slew <= 0:
         max_slew = system.max_slew
 
     if convert_to_arbitrary:
@@ -109,6 +128,8 @@ def make_extended_trapezoid(
             max_slew=max_slew,
             max_grad=max_grad,
             delay=times[0],
+            first=amplitudes[0],
+            last=amplitudes[-1],
         )
     else:
         #  Keep the original possibly irregular sampling
@@ -124,16 +145,15 @@ def make_extended_trapezoid(
         grad.tt = times - grad.delay
         grad.shape_dur = grad.tt[-1]
         grad.area = 0.5 * ((grad.tt[1:] - grad.tt[:-1]) * (grad.waveform[1:] + grad.waveform[:-1])).sum()
+        grad.first = amplitudes[0]
+        grad.last = amplitudes[-1]
 
-    grad.first = amplitudes[0]
-    grad.last = amplitudes[-1]
+        slew = np.diff(grad.waveform) / np.diff(grad.tt)
 
-    slew = np.diff(grad.waveform) / np.diff(grad.tt)
-
-    if max(abs(slew)) > max_slew * (1 + eps):
-        raise ValueError(f'Slew rate violation {max(abs(slew)) / max_slew * 100:.2f}%')
-    if max(abs(grad.waveform)) > max_grad + eps:
-        raise ValueError(f'Gradient amplitude violation {max(abs(grad.waveform)) / max_grad * 100:.2f}%')
+        if max(abs(slew)) > max_slew * (1 + eps):
+            raise ValueError(f'Slew rate violation {max(abs(slew)) / max_slew * 100:.2f}%')
+        if max(abs(grad.waveform)) > max_grad + eps:
+            raise ValueError(f'Gradient amplitude violation {max(abs(grad.waveform)) / max_grad * 100:.2f}%')
 
     if trace_enabled():
         grad.trace = trace()

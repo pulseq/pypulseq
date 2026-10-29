@@ -1,7 +1,10 @@
+import numbers
 from types import SimpleNamespace
 from typing import Union
 
-from pypulseq.supported_labels_rf_use import get_supported_labels
+import numpy as np
+
+from pypulseq.supported_labels_rf_use import LABEL_FLAGS, get_supported_labels
 
 
 def make_label(label: str, type: str, value: Union[bool, float, int]) -> SimpleNamespace:  # noqa: A002
@@ -21,12 +24,12 @@ def make_label(label: str, type: str, value: Union[bool, float, int]) -> SimpleN
             - 'ECO' (counter): echo counter in multi-echo sequences.
             - 'PHS' (counter): cardiac phase counter.
             - 'LIN' (counter): line counter in 2D and 3D acquisitions.
-            - 'PAR' (counter): partition counter; itt counts phase encoding steps in the 2nd (through-slab) phase encoding direction in 3D sequences.
+            - 'PAR' (counter): partition counter; it counts phase encoding steps in the 2nd (through-slab) phase encoding direction in 3D sequences.
             - 'ACQ' (counter): spectroscopic acquisition counter.
             - 'NAV' (flag): navigator data flag.
             - 'REV' (flag): flag indicating that the readout direction is reversed.
             - 'SMS' (flag): simultaneous multi-slice (SMS) acquisition.
-            _ 'REF' (flag): parallel imaging flag indicating reference / auto-calibration data.
+            - 'REF' (flag): parallel imaging flag indicating reference / auto-calibration data.
             - 'IMA' (flag): parallel imaging flag indicating imaging data within the ACS region.
             - 'NOISE' (flag): noise adjust scan, for iPAT acceleration.
             - 'PMC' (flag): for MoCo/PMC Pulseq version to recognize blocks that can be prospectively corrected for motion.
@@ -39,11 +42,15 @@ def make_label(label: str, type: str, value: Union[bool, float, int]) -> SimpleN
                 * `ONCE == 1`: only the first repetition of the block is executed;
                 * `ONCE == 2`: only the last repetition of the block is executed.
 
-            -'TRID' (counter): marks the beginning of a repeatable module in the sequence (e.g. TR).
+            - 'TRID' (counter): marks the beginning of a repeatable module in the sequence (e.g. TR).
 
+        Custom labels can be registered with `pypulseq.add_supported_label()` and are treated as counters,
+        i.e. both 'SET' and 'INC' are allowed for them.
+    type : str
         Label type. Must be one of 'SET' or 'INC' (not compatible with flags).
-     value : bool, float or int
-        Label value.
+    value : bool, float or int
+        Label value. Must be finite; it is converted to an integer before being
+        written to the sequence file.
 
     Returns
     -------
@@ -55,24 +62,29 @@ def make_label(label: str, type: str, value: Union[bool, float, int]) -> SimpleN
     ValueError
         If a valid `label` was not passed. Must be one of 'pypulseq.get_supported_labels()'.
         If a valid `type` was not passed. Must be one of 'SET' or 'INC'.
+        If `type='INC'` is used with a flag label.
         If `value` was not a valid numerical or logical value.
+        If `value` is not finite.
     """
     arr_supported_labels = get_supported_labels()
-    arr_flags = arr_supported_labels[10:-1]
 
     if label not in arr_supported_labels:
         raise ValueError(f'Invalid label. Must be one of {arr_supported_labels}.')
     if type not in ['SET', 'INC']:
         raise ValueError("Invalid type. Must be one of 'SET' or 'INC'.")
-    if not isinstance(value, (bool, float, int)):
+    if not isinstance(value, (numbers.Real, np.bool_)):
         raise ValueError('Must supply a valid numerical or logical value.')
+    if not np.isfinite(value):
+        raise ValueError('Label value must be finite.')
 
     out = SimpleNamespace()
     if type == 'SET':
         out.type = 'labelset'
     elif type == 'INC':
-        if label in arr_flags:
-            raise ValueError(f'As per Pulseq specification, labelinc is not compatible with flags: {arr_flags}.')
+        if label in LABEL_FLAGS:
+            raise ValueError(
+                f'As per Pulseq specification, labelinc is not compatible with flags: {tuple(LABEL_FLAGS)}.'
+            )
         out.type = 'labelinc'
 
     out.label = label

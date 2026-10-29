@@ -41,32 +41,33 @@ def sigpy_n_seq(
     phase_ppm: float = 0.0,
 ) -> Union[SimpleNamespace, Tuple[SimpleNamespace, SimpleNamespace, SimpleNamespace]]:
     """
-    Creates a radio-frequency sinc pulse event using the sigpy rf pulse library and optionally accompanying slice select, slice select rephasing
+    Creates a radio-frequency pulse event using the sigpy rf pulse library and optionally accompanying slice select, slice select rephasing
     trapezoidal gradient events.
 
     Parameters
     ----------
     flip_angle : float
-        Flip angle in radians.
+        Flip angle in radians (rad).
     delay : float, optional, default=0
         Delay in seconds (s).
     duration : float, optional, default=4e-3
         Duration in seconds (s).
     freq_offset : float, optional, default=0
-        Frequency offset in Hertz (Hz).
+        Frequency offset in hertz (Hz).
     center_pos : float, optional, default=0.5
-        Position of peak.5 (midway).
+        Position of RF peak between 0 and 1, where 0 means the
+        beginning of the pulse and 1 means the end of the pulse.
     max_grad : float, optional, default=0
-        Maximum gradient strength of accompanying slice select trapezoidal event.
+        Maximum gradient strength (Hz/m) of accompanying slice select trapezoidal event.
     max_slew : float, optional, default=0
-        Maximum slew rate of accompanying slice select trapezoidal event.
+        Maximum slew rate (Hz/m/s) of accompanying slice select trapezoidal event.
     phase_offset : float, optional, default=0
-        Phase offset in Hertz (Hz).
-    return_gz:bool, default=False
+        Phase offset in radians (rad).
+    return_gz : bool, default=True
         Boolean flag to indicate if slice-selective gradient has to be returned.
     slice_thickness : float, optional, default=0
-        Slice thickness of accompanying slice select trapezoidal event. The slice thickness determines the area of the
-        slice select event.
+        Slice thickness in meters (m) of accompanying slice select trapezoidal event.
+        The slice thickness determines the area of the slice select event.
     system : Opts, optional
         System limits. Default is a system limits object initialized to default values.
     time_bw_product : float, optional, default=4
@@ -98,9 +99,9 @@ def sigpy_n_seq(
     plot: bool, optional, default=True
         Show sigpy plot outputs
     freq_ppm : float, default=0
-        PPM frequency offset.
+        PPM frequency offset in parts per million (ppm).
     phase_ppm : float, default=0
-        PPM phase offset.
+        PPM phase offset in radians per megahertz (rad/MHz).
 
     Returns
     -------
@@ -115,6 +116,11 @@ def sigpy_n_seq(
     ------
     ValueError
         If invalid `use` parameter was passed.
+        If `pulse_cfg.pulse_type` is not 'slr' or 'sms'.
+        If `duration` is not positive or not finite.
+        If `delay` is negative or not finite.
+        If `center_pos` is not in the range [0, 1].
+        If `time_bw_product` is not positive.
         If `return_gz=True` and `slice_thickness` was not provided.
     """
     if system is None:
@@ -127,6 +133,21 @@ def sigpy_n_seq(
     if use != '' and use not in valid_pulse_uses:
         raise ValueError(f'Invalid use parameter. Must be one of {valid_pulse_uses}. Passed: {use}')
 
+    if pulse_cfg.pulse_type not in ('slr', 'sms'):
+        raise ValueError(f"Invalid pulse_type parameter. Must be one of 'slr' or 'sms'. Passed: {pulse_cfg.pulse_type}")
+
+    if not np.isfinite(duration) or duration <= 0:
+        raise ValueError('RF pulse duration must be positive.')
+
+    if not np.isfinite(delay) or delay < 0:
+        raise ValueError('Delay must be non-negative.')
+
+    if not np.isfinite(center_pos) or not 0 <= center_pos <= 1:
+        raise ValueError('center_pos must be in the range [0, 1].')
+
+    if not np.isfinite(time_bw_product) or time_bw_product <= 0:
+        raise ValueError('time_bw_product must be positive.')
+
     if pulse_cfg.pulse_type == 'slr':
         [signal, t, _] = make_slr(
             flip_angle=flip_angle,
@@ -136,7 +157,7 @@ def sigpy_n_seq(
             pulse_cfg=pulse_cfg,
             disp=plot,
         )
-    if pulse_cfg.pulse_type == 'sms':
+    elif pulse_cfg.pulse_type == 'sms':
         [signal, t, _] = make_sms(
             flip_angle=flip_angle,
             time_bw_product=time_bw_product,
@@ -169,7 +190,7 @@ def sigpy_n_seq(
         rfp.delay = rfp.dead_time
 
     if return_gz:
-        if slice_thickness == 0:
+        if not np.isfinite(slice_thickness) or slice_thickness <= 0:
             raise ValueError('Slice thickness must be provided')
 
         if max_grad > 0:
@@ -216,6 +237,32 @@ def make_slr(
     pulse_cfg: Union[SigpyPulseOpts, None] = None,
     disp: bool = False,
 ):
+    """Design a Shinnar-LeRoux RF pulse using sigpy.
+
+    Parameters
+    ----------
+    flip_angle : float
+        Flip angle in radians (rad).
+    time_bw_product : float, default=4.0
+        Time-bandwidth product.
+    duration : float, default=0
+        Duration in seconds (s).
+    system : Opts, default=Opts()
+        System limits.
+    pulse_cfg : SigpyPulseOpts, default=None
+        Pulse configuration options.
+    disp : bool, default=False
+        Show sigpy plot outputs.
+
+    Returns
+    -------
+    signal : numpy.ndarray
+        RF waveform scaled to `flip_angle`.
+    t : numpy.ndarray
+        Time points (s) of the waveform samples.
+    pulse : numpy.ndarray
+        Unscaled RF waveform as returned by sigpy.
+    """
     if system is None:
         system = Opts.default
 
@@ -268,6 +315,32 @@ def make_sms(
     pulse_cfg: Union[SigpyPulseOpts, None] = None,
     disp: bool = False,
 ):
+    """Design a simultaneous multi-slice (SMS) RF pulse using sigpy.
+
+    Parameters
+    ----------
+    flip_angle : float
+        Flip angle in radians (rad).
+    time_bw_product : float, default=4.0
+        Time-bandwidth product.
+    duration : float, default=0
+        Duration in seconds (s).
+    system : Opts, default=Opts()
+        System limits.
+    pulse_cfg : SigpyPulseOpts, default=None
+        Pulse configuration options.
+    disp : bool, default=False
+        Show sigpy plot outputs.
+
+    Returns
+    -------
+    signal : numpy.ndarray
+        RF waveform scaled to `flip_angle`.
+    t : numpy.ndarray
+        Time points (s) of the waveform samples.
+    pulse : numpy.ndarray
+        Unscaled multibanded RF waveform as returned by sigpy.
+    """
     if system is None:
         system = Opts.default
 
