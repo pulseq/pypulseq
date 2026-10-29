@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from typing import Union
 
 import numpy as np
 
@@ -11,12 +10,12 @@ from pypulseq.utils.tracing import trace, trace_enabled
 def make_arbitrary_grad(
     channel: str,
     waveform: np.ndarray,
-    first: Union[float, None] = None,
-    last: Union[float, None] = None,
+    first: float | None = None,
+    last: float | None = None,
     delay: float = 0.0,
-    max_grad: Union[float, None] = None,
-    max_slew: Union[float, None] = None,
-    system: Union[Opts, None] = None,
+    max_grad: float | None = None,
+    max_slew: float | None = None,
+    system: Opts | None = None,
     oversampling: bool = False,
 ) -> SimpleNamespace:
     """

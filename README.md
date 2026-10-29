@@ -7,7 +7,7 @@
 <p align = "left">
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python](https://img.shields.io/badge/python-3.8%2B-blue)](https://pypi.org/project/pypulseq/)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://pypi.org/project/pypulseq/)
 [![FAIR checklist badge](https://fairsoftwarechecklist.net/badge.svg)](https://fairsoftwarechecklist.net/v0.2?f=31&a=32113&i=32322&r=133)
 
 </p>
@@ -100,12 +100,20 @@ Getting started with pulse sequence design using `PyPulseq` is simple:
 2. Then, design gradient, RF or ADC pulse sequence events:
 
     ```python
-    Nx, Ny = 256, 256 # matrix size
-    fov = 220e-3 # field of view
+    Nx, Ny = 256, 256  # matrix size
+    fov = 220e-3  # field of view
     delta_k = fov / Nx
 
     # RF sinc pulse with a 90 degree flip angle
-    rf90 = pp.make_sinc_pulse(flip_angle=90, duration=2e-3, system=system, slice_thickness=5e-3, apodization=0.5,time_bw_product=4, use='excitation')
+    rf90 = pp.make_sinc_pulse(
+        flip_angle=90,
+        duration=2e-3,
+        system=system,
+        slice_thickness=5e-3,
+        apodization=0.5,
+        time_bw_product=4,
+        use='excitation',
+    )
 
     # Frequency encode, trapezoidal event
     gx = pp.make_trapezoid(channel='x', flat_area=Nx * delta_k, flat_time=6.4e-3, system=system)

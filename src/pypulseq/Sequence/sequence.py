@@ -3,7 +3,7 @@ import numbers
 from collections import OrderedDict
 from copy import deepcopy
 from types import SimpleNamespace
-from typing import Any, List, Literal, Tuple, Union
+from typing import Any, Literal
 from warnings import warn
 
 try:
@@ -54,7 +54,7 @@ class Sequence:
     version_minor = int(minor)
     version_revision = revision
 
-    def __init__(self, system: Union[Opts, None] = None, use_block_cache: bool = True):
+    def __init__(self, system: Opts | None = None, use_block_cache: bool = True):
         if system is None:
             system = Opts()
 
@@ -120,7 +120,7 @@ class Sequence:
         s += '\nblock_events: ' + str(len(self.block_events))
         return s
 
-    def adc_times(self, time_range: Union[List[float], None] = None) -> Tuple[np.ndarray, np.ndarray]:
+    def adc_times(self, time_range: list[float] | None = None) -> tuple[np.ndarray, np.ndarray]:
         """
         Return time points of ADC sampling points.
 
@@ -173,7 +173,7 @@ class Sequence:
 
         return t_adc, fp_adc
 
-    def add_block(self, *args: Union[SimpleNamespace, None]) -> None:
+    def add_block(self, *args: SimpleNamespace | None) -> None:
         """
         Add a new block/multiple events to the sequence.
 
@@ -216,12 +216,12 @@ class Sequence:
         max_frequency: float = 2000.0,
         window_width: float = 0.05,
         frequency_oversampling: float = 3.0,
-        time_range: Union[List[float], None] = None,
+        time_range: list[float] | None = None,
         plot: bool = True,
         combine_mode: str = 'max',
         use_derivative: bool = False,
-        acoustic_resonances: Union[List[dict], None] = None,
-    ) -> Tuple[List[np.ndarray], np.ndarray, np.ndarray, np.ndarray]:
+        acoustic_resonances: list[dict] | None = None,
+    ) -> tuple[list[np.ndarray], np.ndarray, np.ndarray, np.ndarray]:
         """
         Calculates the gradient spectrum of the sequence. Returns a spectrogram
         for each gradient channel, as well as a root-sum-squares combined
@@ -288,9 +288,9 @@ class Sequence:
 
     def calculate_kspace(
         self,
-        trajectory_delay: Union[float, List[float], np.ndarray] = 0.0,
-        gradient_offset: Union[float, List[float], np.ndarray] = 0.0,
-    ) -> Tuple[np.ndarray, np.ndarray, List[float], List[float], np.ndarray]:
+        trajectory_delay: float | list[float] | np.ndarray = 0.0,
+        gradient_offset: float | list[float] | np.ndarray = 0.0,
+    ) -> tuple[np.ndarray, np.ndarray, list[float], list[float], np.ndarray]:
         """
         Calculates the k-space trajectory of the entire pulse sequence.
 
@@ -463,11 +463,11 @@ class Sequence:
 
         return k_traj_adc, k_traj, t_excitation, t_refocusing, t_adc
 
-    def calculate_kspacePP(
+    def calculate_kspacePP(  # noqa: N802
         self,
-        trajectory_delay: Union[float, List[float], np.ndarray] = 0,
-        gradient_offset: Union[float, List[float], np.ndarray] = 0,
-    ) -> Tuple[np.array, np.array, np.array, np.array, np.array]:
+        trajectory_delay: float | list[float] | np.ndarray = 0,
+        gradient_offset: float | list[float] | np.ndarray = 0,
+    ) -> tuple[np.array, np.array, np.array, np.array, np.array]:
         warn(
             'Sequence.calculate_kspacePP has been deprecated, use calculate_kspace instead',
             DeprecationWarning,
@@ -477,11 +477,11 @@ class Sequence:
 
     def calc_rf_power(
         self,
-        time_range: Union[Tuple[float, float], List[float], None] = None,
-        block_range: Union[Tuple[int, int], List[int], None] = None,
-        window_duration: Union[float, None] = None,
-        dt: Union[float, None] = 1e-6,
-    ) -> Tuple[float, float, float, float]:
+        time_range: tuple[float, float] | list[float] | None = None,
+        block_range: tuple[int, int] | list[int] | None = None,
+        window_duration: float | None = None,
+        dt: float | None = 1e-6,
+    ) -> tuple[float, float, float, float]:
         """
         Calculate the relative RF power of a sequence.
 
@@ -639,9 +639,9 @@ class Sequence:
     def calculate_pns(
         self,
         hardware: SimpleNamespace,
-        time_range: Union[List[float], None] = None,
+        time_range: list[float] | None = None,
         do_plots: bool = True,
-    ) -> Tuple[bool, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[bool, np.ndarray, np.ndarray, np.ndarray]:
         """
         Calculate PNS using safe model implementation by Szczepankiewicz and Witzel
         See http://github.com/filip-szczepankiewicz/safe_pns_prediction
@@ -676,8 +676,8 @@ class Sequence:
     def check_timing(
         self,
         print_errors: bool = False,
-        max_errors: Union[int, None] = None,
-    ) -> Tuple[bool, List[SimpleNamespace]]:
+        max_errors: int | None = None,
+    ) -> tuple[bool, list[SimpleNamespace]]:
         """
         Checks timing of all blocks and objects in the sequence optionally returns the detailed error log.
 
@@ -706,7 +706,7 @@ class Sequence:
 
         return is_ok, error_report
 
-    def duration(self) -> Tuple[int, int, np.ndarray]:
+    def duration(self) -> tuple[int, int, np.ndarray]:
         """
         Returns the total duration of this sequence, and the total count of blocks and events.
 
@@ -728,7 +728,7 @@ class Sequence:
 
         return duration, num_blocks, event_count
 
-    def evaluate_labels(self, init: Union[dict, None] = None, evolution: str = 'none') -> dict:
+    def evaluate_labels(self, init: dict | None = None, evolution: str = 'none') -> dict:
         """
         Evaluate label values of the entire sequence.
 
@@ -844,7 +844,7 @@ class Sequence:
         """
         self.mod_grad_axis(axis, modifier=-1)
 
-    def get_raw_block_content_IDs(self, block_index: int) -> SimpleNamespace:
+    def get_raw_block_content_IDs(self, block_index: int) -> SimpleNamespace:  # noqa: N802
         """
         Returns PyPulseq block content IDs at `block_index` position in `self.block_events`.
 
@@ -910,7 +910,7 @@ class Sequence:
         else:
             return ''
 
-    def get_extension_type_ID(self, extension_string: str, update: bool = True) -> int:
+    def get_extension_type_ID(self, extension_string: str, update: bool = True) -> int:  # noqa: N802
         """
         Get numeric extension ID for `extension_string`. Will automatically create a new ID if unknown.
 
@@ -973,10 +973,10 @@ class Sequence:
 
     def get_gradients(
         self,
-        trajectory_delay: Union[float, List[float], np.ndarray] = 0,
-        gradient_offset: Union[float, List[float], np.ndarray] = 0,
-        time_range: Union[List[float], None] = None,
-    ) -> List[PPoly]:
+        trajectory_delay: float | list[float] | np.ndarray = 0,
+        gradient_offset: float | list[float] | np.ndarray = 0,
+        time_range: list[float] | None = None,
+    ) -> list[PPoly]:
         """
         Get all gradient waveforms of the sequence in a piecewise-polynomial
         format (scipy PPoly). Gradient values can be accessed easily at one or
@@ -1056,7 +1056,7 @@ class Sequence:
             gw_pp.append(PPoly(np.stack((np.diff(gw[1]) / np.diff(gw[0]), gw[1][:-1])), gw[0], extrapolate=True))
         return gw_pp
 
-    def install(self, target: Union[str, None] = None, clear_cache: bool = False, **kwargs: Any) -> None:
+    def install(self, target: str | None = None, clear_cache: bool = False, **kwargs: Any) -> None:
         """Install a sequence to a target scanner.
 
         The sequence will be installed to a scanner specified by `target`. If `target` is not specified,
@@ -1187,13 +1187,13 @@ class Sequence:
 
     def paper_plot(
         self,
-        time_range: Tuple[float] = (0, np.inf),
+        time_range: tuple[float] = (0, np.inf),
         line_width: float = 1.2,
-        axes_color: Tuple[float] = (0.5, 0.5, 0.5),
+        axes_color: tuple[float] = (0.5, 0.5, 0.5),
         rf_color: str = 'black',
         gx_color: str = 'blue',
         gy_color: str = 'red',
-        gz_color: Tuple[float] = (0, 0.5, 0.3),
+        gz_color: tuple[float] = (0, 0.5, 0.3),
         rf_plot: Literal['abs', 'real', 'imag'] = 'abs',
     ):
         """
@@ -1226,7 +1226,7 @@ class Sequence:
 
     def plot(
         self,
-        label: str = str(),
+        label: str = '',
         show_blocks: bool = False,
         save: bool = False,
         time_range=(0, np.inf),
@@ -1322,13 +1322,13 @@ class Sequence:
     def register_adc_event(self, event: EventLibrary) -> int:
         return block.register_adc_event(self, event)
 
-    def register_grad_event(self, event: SimpleNamespace) -> Union[int, Tuple[int, int]]:
+    def register_grad_event(self, event: SimpleNamespace) -> int | tuple[int, int]:
         return block.register_grad_event(self, event)
 
     def register_label_event(self, event: SimpleNamespace) -> int:
         return block.register_label_event(self, event)
 
-    def register_rf_event(self, event: SimpleNamespace) -> Tuple[int, List[int]]:
+    def register_rf_event(self, event: SimpleNamespace) -> tuple[int, list[int]]:
         return block.register_rf_event(self, event)
 
     def register_rotation_event(self, event: SimpleNamespace) -> int:
@@ -1473,8 +1473,8 @@ class Sequence:
         return rf
 
     def rf_times(
-        self, time_range: Union[List[float], None] = None
-    ) -> Tuple[List[float], np.ndarray, List[float], np.ndarray, np.ndarray]:
+        self, time_range: list[float] | None = None
+    ) -> tuple[list[float], np.ndarray, list[float], np.ndarray, np.ndarray]:
         """
         Return time points of excitations and refocusings.
 
@@ -1577,7 +1577,7 @@ class Sequence:
         if block_index >= self.next_free_block_ID:
             self.next_free_block_ID = block_index + 1
 
-    def set_definition(self, key: str, value: Union[float, int, list, np.ndarray, str, tuple]) -> None:
+    def set_definition(self, key: str, value: float | int | list | np.ndarray | str | tuple) -> None:
         """
         Modify a custom definition of the sequence. Set the user definition 'key' to value 'value'. If the definition
         does not exist it will be created.
@@ -1598,7 +1598,7 @@ class Sequence:
 
         self.definitions[key] = value
 
-    def set_extension_string_ID(self, extension_str: str, extension_id: int) -> None:
+    def set_extension_string_ID(self, extension_str: str, extension_id: int) -> None:  # noqa: N802
         """
         Set numeric ID for the given string extension ID.
 
@@ -1667,25 +1667,25 @@ class Sequence:
         """
 
         # Go through all the blocks and update durations, at the same time checking the consistency of the soft delays
-        sd_str2numID = {}
-        sd_numID2hint = {}
+        sd_str2num_id = {}
+        sd_num_id2hint = {}
         sd_warns = {}
         for block_counters in self.block_events:
             block = self.get_block(block_counters)
             if block.soft_delay is not None:
                 # Check the numeric ID consistency
-                if block.soft_delay.hint not in sd_str2numID:
-                    sd_str2numID[block.soft_delay.hint] = block.soft_delay.numID
+                if block.soft_delay.hint not in sd_str2num_id:
+                    sd_str2num_id[block.soft_delay.hint] = block.soft_delay.numID
                 else:
-                    if sd_str2numID[block.soft_delay.hint] != block.soft_delay.numID:
+                    if sd_str2num_id[block.soft_delay.hint] != block.soft_delay.numID:
                         raise ValueError(
                             f"Soft delay in block {block_counters} with numeric ID {block.soft_delay.numID} and string hint '{block.soft_delay.hint}' is inconsistent with the previous occurrences of the same string hint"
                         )
 
-                if block.soft_delay.numID not in sd_numID2hint:
-                    sd_numID2hint[block.soft_delay.numID] = block.soft_delay.hint
+                if block.soft_delay.numID not in sd_num_id2hint:
+                    sd_num_id2hint[block.soft_delay.numID] = block.soft_delay.hint
                 else:
-                    if sd_numID2hint[block.soft_delay.numID] != block.soft_delay.hint:
+                    if sd_num_id2hint[block.soft_delay.numID] != block.soft_delay.hint:
                         raise ValueError(
                             f"Soft delay in block {block_counters} with numeric ID {block.soft_delay.numID} and string hint '{block.soft_delay.hint}' is inconsistent with the previous occurrences of the same numeric ID"
                         )
@@ -1721,8 +1721,8 @@ class Sequence:
         # Now check if there are some input soft delays which haven't been found in the sequence
         all_input_hints = kwargs.keys()
         for hint in all_input_hints:
-            if hint not in sd_str2numID:
-                available_hints = list(sd_str2numID.keys())
+            if hint not in sd_str2num_id:
+                available_hints = list(sd_str2num_id.keys())
                 raise ValueError(
                     f"Soft delay '{hint}' not found in sequence. "
                     f'Available soft delays: {available_hints if available_hints else "none"}'
@@ -1765,7 +1765,7 @@ class Sequence:
         """
         return ext_test_report_data(self)
 
-    def waveforms(self, append_RF: bool = False, time_range: Union[List[float], None] = None) -> Tuple[np.ndarray]:
+    def waveforms(self, append_RF: bool = False, time_range: list[float] | None = None) -> tuple[np.ndarray]:  # noqa: N803
         """
         Decompress the entire gradient waveform. Returns gradient waveforms as a tuple of `np.ndarray` of
         `gradient_axes` (typically 3) dimensions. Each `np.ndarray` contains timepoints and the corresponding
@@ -1880,9 +1880,7 @@ class Sequence:
                             else:
                                 if abs(grad.amplitude) > eps:
                                     print(
-                                        'Warning: "empty" gradient with non-zero magnitude detected in block {}'.format(
-                                            block_counter
-                                        )
+                                        f'Warning: "empty" gradient with non-zero magnitude detected in block {block_counter}'
                                     )
 
             if block.rf is not None:  # RF
@@ -1937,8 +1935,10 @@ class Sequence:
         return wave_data
 
     def waveforms_and_times(
-        self, append_RF: bool = False, time_range: Union[List[float], None] = None
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        self,
+        append_RF: bool = False,  # noqa: N803
+        time_range: list[float] | None = None,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Decompress the entire gradient waveform. Returns gradient waveforms as a tuple of `np.ndarray` of
         `gradient_axes` (typically 3) dimensions. Each `np.ndarray` contains timepoints and the corresponding
@@ -1979,7 +1979,7 @@ class Sequence:
         remove_duplicates: bool = True,
         check_timing: bool = True,
         v141_compat: bool = False,
-    ) -> Union[str, None]:
+    ) -> str | None:
         """
         Write the sequence data to the given filename using the open file format for MR sequences.
 

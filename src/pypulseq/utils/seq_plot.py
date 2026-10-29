@@ -85,7 +85,7 @@ class SeqPlot:
     def __init__(
         self,
         seq: Sequence,
-        label: str = str(),
+        label: str = '',
         show_blocks: bool = False,
         save: bool = False,
         time_range=(0, np.inf),
@@ -93,7 +93,7 @@ class SeqPlot:
         grad_disp: str = 'kHz/m',
         plot_now: bool = True,
         clear: bool = True,
-        overlay: 'SeqPlot' = None,
+        overlay: SeqPlot = None,
         stacked: bool = False,
         show_guides: bool = False,
         rf_plot: Literal['auto', 'abs', 'real', 'imag'] = 'auto',
