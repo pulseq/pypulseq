@@ -328,6 +328,7 @@ seq_examples = [
     'write_gre_label_softdelay',
     'write_haste',
     'write_radial_gre',
+    'write_radial_gre_rot',
     'write_tse',
     'write_epi',
     'write_epi_label',
@@ -531,7 +532,10 @@ class TestSequence:
             assert a.c[0] == Approx(b.c[0], abs=1e2, rel=1e-3), (
                 f'First-order coefficients of piecewise-polynomial gradient waveform for channel {channel} do not match'
             )
-            assert a.c[1] == Approx(b.c[1], abs=1e-5, rel=1e-5), (
+            # Rotation quaternions are stored with %g precision in the .seq file, which slightly
+            # amplifies rounding differences in the rotated (physical) gradient waveforms
+            c1_rel = 1e-4 if seq_func.__name__ in ['write_radial_gre_rot'] else 1e-5
+            assert a.c[1] == Approx(b.c[1], abs=1e-5, rel=c1_rel), (
                 f'Zero-order coefficients of piecewise-polynomial gradient waveform for channel {channel} do not match'
             )
 
@@ -573,8 +577,14 @@ class TestSequence:
         assert len(seq2.block_events) == len(seq.block_events)
 
     def test_writeread_v141(self, seq_func, tmp_path):
-        # soft delays (seq6, write_gre_label_softdelay) and oversampled gradients (seq_oversampled_grad) are not supported in v141
-        if seq_func.__name__ not in ['seq6', 'write_gre_label_softdelay', 'seq_oversampled_grad']:
+        # soft delays (seq6, write_gre_label_softdelay), oversampled gradients (seq_oversampled_grad)
+        # and the rotation extension (write_radial_gre_rot) are not supported in v141
+        if seq_func.__name__ not in [
+            'seq6',
+            'write_gre_label_softdelay',
+            'seq_oversampled_grad',
+            'write_radial_gre_rot',
+        ]:
             seq_name = str(seq_func.__name__)
             output_filename = tmp_path / (seq_name + '.seq')
 
