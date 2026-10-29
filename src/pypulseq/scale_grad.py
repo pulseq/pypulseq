@@ -1,6 +1,5 @@
 from copy import copy
 from types import SimpleNamespace
-from typing import Union
 
 import numpy as np
 
@@ -8,7 +7,7 @@ from pypulseq import eps
 from pypulseq.opts import Opts
 
 
-def scale_grad(grad: SimpleNamespace, scale: float, system: Union[Opts, None] = None) -> SimpleNamespace:
+def scale_grad(grad: SimpleNamespace, scale: float, system: Opts | None = None) -> SimpleNamespace:
     """
     Scales the gradient with the scalar.
 

@@ -1,7 +1,6 @@
 import math
 from copy import copy
 from types import SimpleNamespace
-from typing import Tuple, Union
 from warnings import warn
 
 import numpy as np
@@ -32,14 +31,14 @@ def sigpy_n_seq(
     phase_offset: float = 0.0,
     return_gz: bool = True,
     slice_thickness: float = 0.0,
-    system: Union[Opts, None] = None,
+    system: Opts | None = None,
     time_bw_product: float = 4.0,
-    pulse_cfg: Union[SigpyPulseOpts, None] = None,
+    pulse_cfg: SigpyPulseOpts | None = None,
     use: str = 'undefined',
     plot: bool = True,
     freq_ppm: float = 0.0,
     phase_ppm: float = 0.0,
-) -> Union[SimpleNamespace, Tuple[SimpleNamespace, SimpleNamespace, SimpleNamespace]]:
+) -> SimpleNamespace | tuple[SimpleNamespace, SimpleNamespace, SimpleNamespace]:
     """
     Creates a radio-frequency pulse event using the sigpy rf pulse library and optionally accompanying slice select, slice select rephasing
     trapezoidal gradient events.
@@ -233,8 +232,8 @@ def make_slr(
     flip_angle: float,
     time_bw_product: float = 4.0,
     duration: float = 0.0,
-    system: Union[Opts, None] = None,
-    pulse_cfg: Union[SigpyPulseOpts, None] = None,
+    system: Opts | None = None,
+    pulse_cfg: SigpyPulseOpts | None = None,
     disp: bool = False,
 ):
     """Design a Shinnar-LeRoux RF pulse using sigpy.
@@ -311,8 +310,8 @@ def make_sms(
     flip_angle: float,
     time_bw_product: float = 4.0,
     duration: float = 0.0,
-    system: Union[Opts, None] = None,
-    pulse_cfg: Union[SigpyPulseOpts, None] = None,
+    system: Opts | None = None,
+    pulse_cfg: SigpyPulseOpts | None = None,
     disp: bool = False,
 ):
     """Design a simultaneous multi-slice (SMS) RF pulse using sigpy.

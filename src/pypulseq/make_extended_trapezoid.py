@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from typing import Union
 
 import numpy as np
 
@@ -12,13 +11,13 @@ from pypulseq.utils.tracing import trace, trace_enabled
 
 def make_extended_trapezoid(
     channel: str,
-    amplitudes: Union[np.ndarray, None] = None,
+    amplitudes: np.ndarray | None = None,
     convert_to_arbitrary: bool = False,
     max_grad: float = 0.0,
     max_slew: float = 0.0,
     skip_check: bool = False,
-    system: Union[Opts, None] = None,
-    times: Union[np.ndarray, None] = None,
+    system: Opts | None = None,
+    times: np.ndarray | None = None,
 ) -> SimpleNamespace:
     """
     Create a gradient by specifying a set of points (amplitudes) at specified time points(times) at a given channel

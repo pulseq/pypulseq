@@ -389,7 +389,7 @@ def test_calculate_kspace_numpy_scalar_args():
 
     expected = seq.calculate_kspace(trajectory_delay=0, gradient_offset=0)
     actual = seq.calculate_kspace(trajectory_delay=np.int64(0), gradient_offset=np.int32(0))
-    for a, b in zip(actual, expected):
+    for a, b in zip(actual, expected, strict=True):
         if isinstance(a, np.ndarray):
             np.testing.assert_allclose(a, b)
         else:

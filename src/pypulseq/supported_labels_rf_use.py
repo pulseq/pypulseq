@@ -1,10 +1,9 @@
-from typing import List, Tuple
 from warnings import warn
 
 # List of supported labels. Order is significant: label events are stored with a 1-based numeric ID equal to the
 # index in this list, and .seq files map label IDs to label names by position. Custom labels can be registered with
 # add_supported_label(); they are always appended at the end to keep the IDs of existing labels stable.
-_SUPPORTED_LABELS: List[str] = [
+_SUPPORTED_LABELS: list[str] = [
     'SLC',
     'SEG',
     'REP',
@@ -33,7 +32,7 @@ _SUPPORTED_LABELS: List[str] = [
 LABEL_FLAGS = frozenset(('NAV', 'REV', 'SMS', 'REF', 'IMA', 'NOISE', 'PMC', 'NOROT', 'NOPOS', 'NOSCL', 'ONCE'))
 
 
-def get_supported_labels() -> Tuple[str, ...]:
+def get_supported_labels() -> tuple[str, ...]:
     """
     Returns
     -------
@@ -43,7 +42,7 @@ def get_supported_labels() -> Tuple[str, ...]:
     return tuple(_SUPPORTED_LABELS)
 
 
-def add_supported_label(new_label: str) -> Tuple[str, ...]:
+def add_supported_label(new_label: str) -> tuple[str, ...]:
     """
     Register a custom label, equivalent to `mr.addCustomLabel` in MATLAB Pulseq.
 
@@ -72,7 +71,7 @@ def add_supported_label(new_label: str) -> Tuple[str, ...]:
     return tuple(_SUPPORTED_LABELS)
 
 
-def get_supported_rf_uses() -> Tuple[str, str, str, str, str, str, str]:
+def get_supported_rf_uses() -> tuple[str, str, str, str, str, str, str]:
     """
     Returns
     -------

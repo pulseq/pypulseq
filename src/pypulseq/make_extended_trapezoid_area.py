@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from typing import Tuple, Union
 
 import numpy as np
 
@@ -16,11 +15,11 @@ def make_extended_trapezoid_area(
     grad_start: float,
     grad_end: float,
     convert_to_arbitrary: bool = False,
-    system: Union[Opts, None] = None,
-    duration: Union[float, None] = None,
-    max_grad: Union[float, None] = None,
-    max_slew: Union[float, None] = None,
-) -> Tuple[SimpleNamespace, np.ndarray, np.ndarray]:
+    system: Opts | None = None,
+    duration: float | None = None,
+    max_grad: float | None = None,
+    max_slew: float | None = None,
+) -> tuple[SimpleNamespace, np.ndarray, np.ndarray]:
     """
     Make an extended trapezoid for given area and gradient start and end point.
     If no duration is given, the shortest possible duration that satisfies the constraints is used.
@@ -99,7 +98,7 @@ def make_extended_trapezoid_area(
     def _calc_ramp_time(grad_1: float, grad_2: float) -> float:
         return _to_raster(abs(grad_1 - grad_2) / max_slew)
 
-    def _find_solution(duration: int) -> Union[Tuple[int, int, int, float], None]:
+    def _find_solution(duration: int) -> tuple[int, int, int, float] | None:
         """Find extended trapezoid gradient waveform for given duration.
 
         The function performs a grid search over all possible ramp-up, ramp-down and flat times
