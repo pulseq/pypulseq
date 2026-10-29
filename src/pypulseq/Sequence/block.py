@@ -9,6 +9,8 @@ from pypulseq.block_to_events import block_to_events
 from pypulseq.compress_shape import compress_shape
 from pypulseq.decompress_shape import decompress_shape
 from pypulseq.event_lib import EventLibrary
+from pypulseq.opts import Opts
+from pypulseq.rotate_3d import rotate_3d
 from pypulseq.Sequence.ext_grad_check import ext_grad_check
 from pypulseq.supported_labels_rf_use import get_supported_labels
 from pypulseq.utils.tracing import trace_enabled
@@ -45,10 +47,12 @@ def set_block(self, block_index: int, *args: Union[SimpleNamespace, float]) -> N
         If multiple soft_delay extensions are used in a block.
         If a soft delay extension is used in a block of zero duration.
         If a soft delay extension is used in a block containing conventional events.
+        If more than one rotation extension event is added to a block.
     """
     events = block_to_events(*args)
     new_block = np.zeros(7, dtype=np.int32)
     duration = 0
+    rot_quaternion = None
 
     check_g = {
         0: SimpleNamespace(start=(0, 0), stop=(0, 0)),
@@ -164,6 +168,17 @@ def set_block(self, block_index: int, *args: Union[SimpleNamespace, float]) -> N
                 duration = max(duration, event.default_duration)
                 ext = {'type': self.get_extension_type_ID('DELAYS'), 'ref': event_id}
                 extensions.append(ext)
+            elif event.type == 'rot3D':
+                if rot_quaternion is not None:
+                    raise ValueError('Only one rotation extension event can be added per block')
+                if hasattr(event, 'id'):
+                    event_id = event.id
+                else:
+                    event_id = register_rotation_event(self, event)
+
+                ext = {'type': self.get_extension_type_ID('ROTATIONS'), 'ref': event_id}
+                extensions.append(ext)
+                rot_quaternion = np.asarray(event.rot_quaternion, dtype=float)
             else:
                 raise ValueError(f'Unknown event type {event.type} passed to set_block().')
         else:
@@ -220,7 +235,7 @@ def set_block(self, block_index: int, *args: Union[SimpleNamespace, float]) -> N
     # =========
     # PERFORM GRADIENT CHECKS
     # =========
-    ext_grad_check(self, block_index, check_g, duration)
+    ext_grad_check(self, block_index, check_g, duration, rot_quaternion)
 
     self.block_events[block_index] = new_block
     self.block_durations[block_index] = float(duration)
@@ -300,7 +315,7 @@ def get_block(self, block_index: int, add_IDs: bool = False) -> SimpleNamespace:
         return self.block_cache[block_index]
 
     block = SimpleNamespace()
-    attrs = ['block_duration', 'rf', 'gx', 'gy', 'gz', 'adc', 'label', 'soft_delay']
+    attrs = ['block_duration', 'rf', 'gx', 'gy', 'gz', 'adc', 'label', 'soft_delay', 'rotation']
     values = [None] * len(attrs)
     for att, val in zip(attrs, values):
         setattr(block, att, val)
@@ -381,6 +396,16 @@ def get_block(self, block_index: int, add_IDs: bool = False) -> SimpleNamespace:
             if add_IDs:
                 block.soft_delay.id = delay_ext[1].item()
 
+        # Unpack rotation
+        rot_ext = raw_block.ext[:, raw_block.ext[0] == self.get_extension_type_ID('ROTATIONS', update=False)]
+        if rot_ext.shape[-1] > 0:
+            if rot_ext.shape[-1] > 1:
+                raise ValueError('Only one rotation extension object per block is allowed')
+            data = self.rotation_library.data[rot_ext[1, 0]]
+            block.rotation = SimpleNamespace(type='rot3D', rot_quaternion=np.array(data, dtype=float))
+            if add_IDs:
+                block.rotation.id = rot_ext[1, 0]
+
         if trig_ext.shape[-1] + label_ext.shape[-1] != raw_block.ext.shape[-1]:
             for i in range(raw_block.ext.shape[1]):
                 ext_id = raw_block.ext[0, i]
@@ -389,6 +414,7 @@ def get_block(self, block_index: int, add_IDs: bool = False) -> SimpleNamespace:
                     and ext_id != self.get_extension_type_ID('LABELSET', update=False)
                     and ext_id != self.get_extension_type_ID('LABELINC', update=False)
                     and ext_id != self.get_extension_type_ID('DELAYS', update=False)
+                    and ext_id != self.get_extension_type_ID('ROTATIONS', update=False)
                 ):
                     warnings.warn(f'Unknown extension ID {ext_id}')
 
@@ -510,6 +536,38 @@ def get_block(self, block_index: int, add_IDs: bool = False) -> SimpleNamespace:
         self.block_cache[block_index] = block
 
     return block
+
+
+def get_block_gradients(block: SimpleNamespace, system: Opts) -> List[Union[SimpleNamespace, None]]:
+    """
+    Gradients [gx, gy, gz] of `block` with the block's rotation extension (if any) applied.
+
+    Entries are None for axes without a gradient.
+
+    Parameters
+    ----------
+    block : SimpleNamespace
+        PyPulseq block as returned by `get_block()`.
+    system : Opts
+        System limits, used when adding rotated gradient components on the same axis.
+
+    Returns
+    -------
+    list[SimpleNamespace or None]
+        Gradients on the x, y and z axes in the physical (scanner) frame.
+    """
+    if getattr(block, 'rotation', None) is None:
+        return [block.gx, block.gy, block.gz]
+
+    grads_in = [g for g in (block.gx, block.gy, block.gz) if g is not None]
+    rotated = rotate_3d(*grads_in, rotation=block.rotation.rot_quaternion, system=system)
+
+    grads = [None, None, None]
+    for g in rotated:
+        if getattr(g, 'type', None) in ('grad', 'trap'):
+            grads[['x', 'y', 'z'].index(g.channel)] = g
+
+    return grads
 
 
 def register_adc_event(self, event: EventLibrary) -> Tuple[int, int]:
@@ -762,6 +820,36 @@ def register_soft_delay_event(self, event: SimpleNamespace) -> int:
     if self.use_block_cache and found:
         self.block_cache.clear()
     return soft_delay_id
+
+
+def register_rotation_event(self, event: SimpleNamespace) -> int:
+    """
+    Parameters
+    ----------
+    event : SimpleNamespace
+        Rotation extension event to be registered.
+
+    Returns
+    -------
+    int
+        ID of registered rotation event.
+
+    Raises
+    ------
+    ValueError
+        If the rotation quaternion is not a finite unit quaternion with 4 elements.
+    """
+    q = np.asarray(event.rot_quaternion, dtype=float).ravel()
+    if q.size != 4 or not np.all(np.isfinite(q)) or abs(1 - q @ q) >= 1e-6:
+        raise ValueError(f'Invalid rotation quaternion {q} detected during register_rotation_event()')
+
+    rotation_id, found = self.rotation_library.find_or_insert(tuple(float(v) for v in q))
+
+    # Clear block cache because rotation event was overwritten
+    if self.use_block_cache and found:
+        self.block_cache.clear()
+
+    return rotation_id
 
 
 def register_rf_event(self, event: SimpleNamespace) -> Tuple[int, List[int]]:

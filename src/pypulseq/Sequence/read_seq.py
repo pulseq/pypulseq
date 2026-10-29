@@ -50,6 +50,7 @@ def read(self, path: str, detect_rf_use: Union[bool, None] = None, remove_duplic
     self.label_inc_library = EventLibrary()
     self.label_set_library = EventLibrary()
     self.rf_library = EventLibrary()
+    self.rotation_library = EventLibrary()
     self.shape_library = EventLibrary()
     self.trigger_library = EventLibrary()
 
@@ -238,6 +239,17 @@ def read(self, path: str, detect_rf_use: Union[bool, None] = None, remove_duplic
                 for d in self.soft_delay_library.data.values():
                     if d[3] not in self.soft_delay_hints:
                         self.soft_delay_hints[d[3]] = d[0]
+            elif section[:19] == 'extension ROTATIONS':
+                extension_id = int(section[19:])
+                self.set_extension_string_ID('ROTATIONS', extension_id)
+                self.rotation_library = __read_events(input_file, (1, 1, 1, 1), event_library=self.rotation_library)
+                # Normalize the rotation quaternions
+                for k in self.rotation_library.data:
+                    q = np.asarray(self.rotation_library.data[k], dtype=float)
+                    norm = np.linalg.norm(q)
+                    if norm == 0:
+                        raise ValueError('Invalid rotation quaternion in the ROTATIONS extension data')
+                    self.rotation_library.update(k, None, tuple(q / norm))
             else:
                 raise ValueError(f'Unknown section code: {section}')
 

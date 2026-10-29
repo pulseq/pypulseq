@@ -240,6 +240,17 @@ def write(self, file_name: Union[str, Path], create_signature, remove_duplicates
                 output_file.write(s)
             output_file.write('\n')
 
+        if len(self.rotation_library.data) != 0:
+            output_file.write('# Extension specification for rotation events:\n')
+            output_file.write('# id RotQuat0 RotQuatX RotQuatY RotQuatZ\n')
+            tid = self.get_extension_type_ID('ROTATIONS')
+            output_file.write(f'extension ROTATIONS {tid}\n')
+            id_format_str = '{:.0f} {:g} {:g} {:g} {:g}\n'
+            for k in self.rotation_library.data:
+                s = id_format_str.format(k, *[v + 0.0 for v in self.rotation_library.data[k]])
+                output_file.write(s)
+            output_file.write('\n')
+
         if len(self.shape_library.data) != 0:
             output_file.write('# Sequence Shapes\n')
             output_file.write('[SHAPES]\n\n')
@@ -305,6 +316,12 @@ def write_v141(self, file_name: Union[str, Path], create_signature, remove_dupli
     RuntimeError
         If an unsupported definition is encountered.
     """
+    if len(self.rotation_library.data) != 0:
+        raise RuntimeError(
+            'The sequence uses the rotation extension, which is incompatible with the file format v1.4.1. '
+            'Use write() without v141_compat.'
+        )
+
     # `>.0f` for decimals.
     # `>g` to truncate insignificant zeros.
     file_name = Path(file_name)
