@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from typing import Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -32,13 +31,13 @@ def _scalar_first_quat(rotation: Rotation) -> np.ndarray:
 
 def make_rotation(
     *,
-    phi: Union[float, None] = None,
-    theta: Union[float, None] = None,
-    axis: Union[ArrayLike, None] = None,
-    angle: Union[float, None] = None,
-    quaternion: Union[ArrayLike, None] = None,
-    rot_matrix: Union[ArrayLike, None] = None,
-    rotation: Union[Rotation, None] = None,
+    phi: float | None = None,
+    theta: float | None = None,
+    axis: ArrayLike | None = None,
+    angle: float | None = None,
+    quaternion: ArrayLike | None = None,
+    rot_matrix: ArrayLike | None = None,
+    rotation: Rotation | None = None,
 ) -> SimpleNamespace:
     """
     Create a rotation extension event (`type='rot3D'`).
@@ -144,16 +143,16 @@ def make_rotation(
         rot.rot_quaternion = q / norm
 
     elif rot_matrix is not None:
-        R = np.asarray(rot_matrix, dtype=float)
-        if R.shape != (3, 3):
-            raise ValueError(f'Rotation matrix must have shape (3, 3), got {R.shape}.')
-        if not np.all(np.isfinite(R)):
+        rot_mat = np.asarray(rot_matrix, dtype=float)
+        if rot_mat.shape != (3, 3):
+            raise ValueError(f'Rotation matrix must have shape (3, 3), got {rot_mat.shape}.')
+        if not np.all(np.isfinite(rot_mat)):
             raise ValueError('Rotation matrix must only contain finite values.')
-        if not np.allclose(R @ R.T, np.eye(3), atol=1e-6):
+        if not np.allclose(rot_mat @ rot_mat.T, np.eye(3), atol=1e-6):
             raise ValueError('Rotation matrix is not orthogonal.')
-        if not np.isclose(np.linalg.det(R), 1.0, atol=1e-6):
+        if not np.isclose(np.linalg.det(rot_mat), 1.0, atol=1e-6):
             raise ValueError('Rotation matrix determinant is not +1 (improper rotation).')
-        rot.rot_quaternion = _scalar_first_quat(Rotation.from_matrix(R))
+        rot.rot_quaternion = _scalar_first_quat(Rotation.from_matrix(rot_mat))
 
     else:
         if not isinstance(rotation, Rotation) or not rotation.single:

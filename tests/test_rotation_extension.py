@@ -52,9 +52,9 @@ def test_make_rotation_quaternion_normalized():
 
 
 def test_make_rotation_rot_matrix():
-    R = Rotation.from_euler('yzx', [0.3, -0.5, 1.1]).as_matrix()
-    rot = pp.make_rotation(rot_matrix=R)
-    np.testing.assert_allclose(rot_mat_from_quat(rot.rot_quaternion), R, atol=1e-12)
+    rot_mat = Rotation.from_euler('yzx', [0.3, -0.5, 1.1]).as_matrix()
+    rot = pp.make_rotation(rot_matrix=rot_mat)
+    np.testing.assert_allclose(rot_mat_from_quat(rot.rot_quaternion), rot_mat, atol=1e-12)
     # canonical sign: scalar part >= 0
     assert rot.rot_quaternion[0] >= 0
 
@@ -178,27 +178,27 @@ def test_waveforms_match_rotated_events():
 
     wave_rotated = seq_rotated.waveforms()
     wave_extension = seq_extension.waveforms()
-    for w_rot, w_ext in zip(wave_rotated, wave_extension):
+    for w_rot, w_ext in zip(wave_rotated, wave_extension, strict=True):
         np.testing.assert_allclose(w_rot, w_ext, atol=1e-6)
 
 
 def test_waveforms_match_rotate_3d():
     axis = np.array([1.0, 1.0, 1.0])
     angle = 0.7
-    R = Rotation.from_rotvec(angle * axis / np.linalg.norm(axis)).as_matrix()
+    rot = Rotation.from_rotvec(angle * axis / np.linalg.norm(axis)).as_matrix()
     gx = pp.make_trapezoid('x', area=1000, duration=1e-3)
     gy = pp.make_trapezoid('y', area=-400, duration=1e-3)
     gz = pp.make_trapezoid('z', area=200, duration=1e-3)
 
     seq_rotated = pp.Sequence()
-    seq_rotated.add_block(*pp.rotate_3d(gx, gy, gz, rotation=R))
+    seq_rotated.add_block(*pp.rotate_3d(gx, gy, gz, rotation=rot))
 
     seq_extension = pp.Sequence()
     seq_extension.add_block(gx, gy, gz, pp.make_rotation(axis=axis, angle=angle))
 
     wave_rotated = seq_rotated.waveforms()
     wave_extension = seq_extension.waveforms()
-    for w_rot, w_ext in zip(wave_rotated, wave_extension):
+    for w_rot, w_ext in zip(wave_rotated, wave_extension, strict=True):
         np.testing.assert_allclose(w_rot, w_ext, atol=1e-6)
 
     # get_block must return the unrotated (logical frame) gradient
@@ -251,7 +251,7 @@ def test_write_read_rotation(tmp_path, compare_seq_file):
     np.testing.assert_allclose(block.rotation.rot_quaternion, seq.get_block(1).rotation.rot_quaternion, atol=1e-6)
 
     wave1, wave2 = seq.waveforms(), seq2.waveforms()
-    for w1, w2 in zip(wave1, wave2):
+    for w1, w2 in zip(wave1, wave2, strict=True):
         np.testing.assert_allclose(w1, w2, rtol=1e-5)
 
     # Rewriting the read sequence produces an identical file

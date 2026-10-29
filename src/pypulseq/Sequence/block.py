@@ -538,7 +538,7 @@ def get_block(self, block_index: int, add_IDs: bool = False) -> SimpleNamespace:
     return block
 
 
-def get_block_gradients(block: SimpleNamespace, system: Opts) -> List[Union[SimpleNamespace, None]]:
+def get_block_gradients(block: SimpleNamespace, system: Opts) -> list[SimpleNamespace | None]:
     """
     Gradients [gx, gy, gz] of `block` with the block's rotation extension (if any) applied.
 
