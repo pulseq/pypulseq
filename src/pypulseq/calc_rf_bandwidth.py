@@ -1,7 +1,6 @@
 import math
 import warnings
 from types import SimpleNamespace
-from typing import Tuple, Union
 
 import numpy as np
 
@@ -15,8 +14,8 @@ def calc_rf_bandwidth(
     return_axis: bool = False,
     return_spectrum: bool = False,
     dw: float = 10,
-    dt: Union[float, None] = None,
-) -> Union[float, Tuple[float, np.ndarray], Tuple[float, np.ndarray, float]]:
+    dt: float | None = None,
+) -> float | tuple[float, np.ndarray] | tuple[float, np.ndarray, float]:
     """
     Calculate the spectrum of the RF pulse. Returns the bandwidth of the pulse (calculated by a simple FFT, e.g.
     presuming a low-angle approximation) and optionally the spectrum and the frequency axis. The default for the

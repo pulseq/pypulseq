@@ -1,7 +1,6 @@
 import hashlib
 import numbers
 from pathlib import Path
-from typing import Union
 from warnings import warn
 
 import numpy as np
@@ -12,7 +11,7 @@ from pypulseq.supported_labels_rf_use import get_supported_labels, get_supported
 version_major, version_minor, version_revision = __version__.split('.')[:3]
 
 
-def write(self, file_name: Union[str, Path], create_signature, remove_duplicates=True) -> Union[str, None]:
+def write(self, file_name: str | Path, create_signature, remove_duplicates=True) -> str | None:
     """
     Write the sequence data to the given filename using the open file format for MR sequences.
 
@@ -246,9 +245,9 @@ def write(self, file_name: Union[str, Path], create_signature, remove_duplicates
             output_file.write('[SHAPES]\n\n')
             for k in self.shape_library.data:
                 shape_data = self.shape_library.data[k]
-                s = 'shape_id {:.0f}\n'.format(k)
+                s = f'shape_id {k:.0f}\n'
                 output_file.write(s)
-                s = 'num_samples {:.0f}\n'.format(shape_data[0])
+                s = f'num_samples {shape_data[0]:.0f}\n'
                 output_file.write(s)
                 s = ('{:.9g}\n' * len(shape_data[1:])).format(*shape_data[1:])
                 output_file.write(s)
@@ -280,7 +279,7 @@ def write(self, file_name: Union[str, Path], create_signature, remove_duplicates
         return md5
 
 
-def write_v141(self, file_name: Union[str, Path], create_signature, remove_duplicates=True) -> Union[str, None]:
+def write_v141(self, file_name: str | Path, create_signature, remove_duplicates=True) -> str | None:
     """
     Write the sequence data to the given filename using the open file format for MR sequences.
 
@@ -506,9 +505,9 @@ def write_v141(self, file_name: Union[str, Path], create_signature, remove_dupli
             output_file.write('[SHAPES]\n\n')
             for k in self.shape_library.data:
                 shape_data = self.shape_library.data[k]
-                s = 'shape_id {:.0f}\n'.format(k)
+                s = f'shape_id {k:.0f}\n'
                 output_file.write(s)
-                s = 'num_samples {:.0f}\n'.format(shape_data[0])
+                s = f'num_samples {shape_data[0]:.0f}\n'
                 output_file.write(s)
                 s = ('{:.9g}\n' * len(shape_data[1:])).format(*shape_data[1:])
                 output_file.write(s)

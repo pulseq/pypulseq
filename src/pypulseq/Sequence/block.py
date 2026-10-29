@@ -2,7 +2,6 @@ import math
 import numbers
 import warnings
 from types import SimpleNamespace
-from typing import List, Tuple, Union
 
 import numpy as np
 
@@ -15,7 +14,7 @@ from pypulseq.supported_labels_rf_use import get_supported_labels
 from pypulseq.utils.tracing import trace_enabled
 
 
-def set_block(self, block_index: int, *args: Union[SimpleNamespace, float]) -> None:
+def set_block(self, block_index: int, *args: SimpleNamespace | float) -> None:
     """
     Replace block at index with new block provided as block structure, add sequence block, or create a new block
     from events and store at position specified by index. The block or events are provided in uncompressed form and
@@ -513,7 +512,7 @@ def get_block(self, block_index: int, add_IDs: bool = False) -> SimpleNamespace:
     return block
 
 
-def register_adc_event(self, event: EventLibrary) -> Tuple[int, int]:
+def register_adc_event(self, event: EventLibrary) -> tuple[int, int]:
     """
 
     Parameters
@@ -605,7 +604,7 @@ def register_control_event(self, event: SimpleNamespace) -> int:
     return control_id
 
 
-def register_grad_event(self, event: SimpleNamespace) -> Union[int, Tuple[int, List[int]]]:
+def register_grad_event(self, event: SimpleNamespace) -> int | tuple[int, list[int]]:
     """
     Parameters
     ----------
@@ -765,7 +764,7 @@ def register_soft_delay_event(self, event: SimpleNamespace) -> int:
     return soft_delay_id
 
 
-def register_rf_event(self, event: SimpleNamespace) -> Tuple[int, List[int]]:
+def register_rf_event(self, event: SimpleNamespace) -> tuple[int, list[int]]:
     """
     Parameters
     ----------

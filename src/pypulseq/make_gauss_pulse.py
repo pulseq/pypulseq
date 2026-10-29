@@ -1,7 +1,6 @@
 import math
 from copy import copy
 from types import SimpleNamespace
-from typing import Tuple, Union
 from warnings import warn
 
 import numpy as np
@@ -26,15 +25,12 @@ def make_gauss_pulse(
     phase_offset: float = 0.0,
     return_gz: bool = False,
     slice_thickness: float = 0.0,
-    system: Union[Opts, None] = None,
+    system: Opts | None = None,
     time_bw_product: float = 4.0,
     use: str = 'undefined',
     freq_ppm: float = 0.0,
     phase_ppm: float = 0.0,
-) -> Union[
-    SimpleNamespace,
-    Tuple[SimpleNamespace, SimpleNamespace, SimpleNamespace],
-]:
+) -> SimpleNamespace | tuple[SimpleNamespace, SimpleNamespace, SimpleNamespace]:
     """
     Create a [optionally slice selective] Gauss pulse.
 

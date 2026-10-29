@@ -1,13 +1,12 @@
 from types import SimpleNamespace
-from typing import Tuple, Union
 
 import numpy as np
 
 
 def calc_rf_power(
     rf: SimpleNamespace,
-    dt: Union[float, None] = 1e-6,
-) -> Tuple[float, float, float]:
+    dt: float | None = 1e-6,
+) -> tuple[float, float, float]:
     """
     Calculate the relative power of the RF pulse.
 

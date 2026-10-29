@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 import numpy as np
 
@@ -6,7 +6,7 @@ from pypulseq import eps
 from pypulseq.convert import convert
 
 
-def ext_test_report_data(self) -> Dict[str, Any]:
+def ext_test_report_data(self) -> dict[str, Any]:
     """
     Analyze the sequence and return statistics as a dictionary.
 
@@ -204,7 +204,7 @@ def ext_test_report_data(self) -> Dict[str, Any]:
     gs_abs_converted = convert(from_value=gs_abs, from_unit='Hz/m/s', to_unit='T/m/s', gamma=self.system.gamma)
 
     # Build the result dictionary
-    data: Dict[str, Any] = {
+    data: dict[str, Any] = {
         'num_blocks': num_blocks,
         'event_count': {
             'rf': int(event_count[1]),
@@ -249,7 +249,7 @@ def ext_test_report_data(self) -> Dict[str, Any]:
     return data
 
 
-def ext_test_report_str(data: Dict[str, Any]) -> str:
+def ext_test_report_str(data: dict[str, Any]) -> str:
     """
     Format test report data dictionary into a human-readable string.
 

@@ -1,5 +1,3 @@
-from typing import Tuple, Union
-
 import numpy as np
 
 from pypulseq.opts import Opts
@@ -8,12 +6,12 @@ from pypulseq.opts import Opts
 def calc_ramp(
     k0: np.ndarray,
     k_end: np.ndarray,
-    max_grad: Union[np.ndarray, None] = None,
+    max_grad: np.ndarray | None = None,
     max_points: int = 500,
-    max_slew: Union[np.ndarray, None] = None,
-    system: Union[Opts, None] = None,
+    max_slew: np.ndarray | None = None,
+    system: Opts | None = None,
     oversampling: bool = False,
-) -> Tuple[np.ndarray, bool]:
+) -> tuple[np.ndarray, bool]:
     """
     Join the points `k0` and `k_end` in three-dimensional  k-space in minimal time, observing the gradient and slew
     limits (`max_grad` and `max_slew` respectively), and the gradient strength `g0` before `k0[:, 1]` and `Gend` after

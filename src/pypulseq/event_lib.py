@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from typing import Tuple, Union
 
 try:
     from typing import Self
@@ -50,7 +49,7 @@ class EventLibrary:
         s += '\ntype: ' + str(len(self.type))
         return s
 
-    def find(self, new_data: np.ndarray) -> Tuple[int, bool]:
+    def find(self, new_data: np.ndarray) -> tuple[int, bool]:
         """
         Finds data `new_data` in event library.
 
@@ -81,7 +80,7 @@ class EventLibrary:
 
         return key_id, found
 
-    def find_or_insert(self, new_data: np.ndarray, data_type: str = str()) -> Tuple[int, bool]:
+    def find_or_insert(self, new_data: np.ndarray, data_type: str = '') -> tuple[int, bool]:
         """
         Lookup a data structure in the given library and return the index of the data in the library. If the data does
         not exist in the library it is inserted right away. The data is a 1xN array with event-specific data.
@@ -119,7 +118,7 @@ class EventLibrary:
             # Insert
             self.data[key_id] = new_data
 
-            if data_type != str():
+            if data_type != '':
                 self.type[key_id] = data_type
 
             self.keymap[key] = key_id
@@ -127,7 +126,7 @@ class EventLibrary:
 
         return key_id, found
 
-    def insert(self, key_id: int, new_data: np.ndarray | list, data_type: str = str()) -> int:
+    def insert(self, key_id: int, new_data: np.ndarray | list, data_type: str = '') -> int:
         """
         Add event to library.
 
@@ -161,7 +160,7 @@ class EventLibrary:
             key = tuple(new_data)
 
         self.data[key_id] = new_data
-        if data_type != str():
+        if data_type != '':
             self.type[key_id] = data_type
 
         self.keymap[key] = key_id
@@ -212,9 +211,9 @@ class EventLibrary:
     def update(
         self,
         key_id: int,
-        old_data: Union[np.ndarray, None],  # noqa: ARG002
+        old_data: np.ndarray | None,  # noqa: ARG002
         new_data: np.ndarray,
-        data_type: str = str(),
+        data_type: str = '',
     ):
         """
         Parameters
@@ -234,7 +233,7 @@ class EventLibrary:
         key_id: int,
         old_data: np.ndarray,
         new_data: np.ndarray,
-        data_type: str = str(),
+        data_type: str = '',
     ):
         """
         Parameters
@@ -246,7 +245,7 @@ class EventLibrary:
         """
         self.update(key_id, old_data, new_data, data_type)
 
-    def remove_duplicates(self, digits: Union[int, Tuple[int]]) -> Tuple[Self, dict]:
+    def remove_duplicates(self, digits: int | tuple[int]) -> tuple[Self, dict]:
         """
         Remove duplicate events from this event library by rounding the data
         according to the significant `digits` specification, and then removing
@@ -272,7 +271,7 @@ class EventLibrary:
             in the new library.
         """
 
-        def round_data(data: Tuple[float], digits: Tuple[int]) -> Tuple[float]:
+        def round_data(data: tuple[float], digits: tuple[int]) -> tuple[float]:
             """
             Round the data tuple to a specified number of significant digits,
             specified by `digits`. Rounding behavior is similar to the {.Ng}
@@ -310,6 +309,6 @@ class EventLibrary:
 
         # Recreate library using rounded values
         for k, v in sorted(rounded_data.items()):
-            mapping[k], _ = new_library.find_or_insert(v, self.type[k] if k in self.type else str())
+            mapping[k], _ = new_library.find_or_insert(v, self.type.get(k, ''))
 
         return new_library, mapping

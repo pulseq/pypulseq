@@ -1,7 +1,7 @@
 import re
 import warnings
+from collections.abc import Callable
 from types import SimpleNamespace
-from typing import Callable, Dict, List, Tuple, Union
 
 import numpy as np
 
@@ -13,7 +13,7 @@ from pypulseq.event_lib import EventLibrary
 from pypulseq.supported_labels_rf_use import get_supported_labels
 
 
-def read(self, path: str, detect_rf_use: Union[bool, None] = None, remove_duplicates: bool = True) -> None:
+def read(self, path: str, detect_rf_use: bool | None = None, remove_duplicates: bool = True) -> None:
     """
     Load sequence from file - read the given filename and load sequence data into sequence object.
 
@@ -40,7 +40,7 @@ def read(self, path: str, detect_rf_use: Union[bool, None] = None, remove_duplic
         If unexpected sections are encountered when loading a sequence file.
     """
     try:
-        input_file = open(path, 'r')
+        input_file = open(path)
     except FileNotFoundError as e:
         raise FileNotFoundError(e) from e
 
@@ -458,7 +458,7 @@ def read(self, path: str, detect_rf_use: Union[bool, None] = None, remove_duplic
         self.remove_duplicates(in_place=True)
 
 
-def __read_definitions(input_file) -> Dict[str, str]:
+def __read_definitions(input_file) -> dict[str, str]:
     """
     Read the [DEFINITIONS] section of a sequence fil and return a map of key/value entries.
 
@@ -489,7 +489,7 @@ def __read_definitions(input_file) -> Dict[str, str]:
     return definitions
 
 
-def __read_version(input_file) -> Tuple[int, int, int]:
+def __read_version(input_file) -> tuple[int, int, int]:
     """
      Read the [VERSION] section of a sequence file.
 
@@ -524,7 +524,7 @@ def __read_version(input_file) -> Tuple[int, int, int]:
 
 def __read_blocks(
     input_file, block_duration_raster: float, version_combined: int
-) -> Tuple[Dict[int, np.ndarray], List[float], List[int]]:
+) -> tuple[dict[int, np.ndarray], list[float], list[int]]:
     """
     Read the [BLOCKS] section of a sequence file and return the event table.
 
@@ -568,8 +568,8 @@ def __read_blocks(
 
 def __read_events(
     input_file,
-    scale: Union[Tuple, None] = None,
-    event_type: str = str(),
+    scale: tuple | None = None,
+    event_type: str = '',
     event_library: EventLibrary = None,
     append=None,
 ) -> EventLibrary:
@@ -777,7 +777,7 @@ def __strip_line(input_file) -> str:
     return line.strip() if line != '' else -1
 
 
-def __read_format(input_file, scale: Tuple) -> Tuple[List, Tuple, List]:
+def __read_format(input_file, scale: tuple) -> tuple[list, tuple, list]:
     """
     Generate a format specifier list based on the scale vector.
 
@@ -815,7 +815,7 @@ def __read_format(input_file, scale: Tuple) -> Tuple[List, Tuple, List]:
     return line, scale, format_spec
 
 
-def __fromstring(line, format_spec: List) -> List:
+def __fromstring(line, format_spec: list) -> list:
     """
     Parse a line of text using a dynamic format specification.
 

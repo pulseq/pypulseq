@@ -1,10 +1,9 @@
 from types import SimpleNamespace
-from typing import List
 
 import numpy as np
 
 
-def asc_to_acoustic_resonances(asc: dict) -> List[dict]:
+def asc_to_acoustic_resonances(asc: dict) -> list[dict]:
     """
     Convert ASC dictionary from readasc to list of acoustic resonances
 

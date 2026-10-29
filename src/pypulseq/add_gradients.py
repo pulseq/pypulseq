@@ -1,6 +1,5 @@
 from copy import copy, deepcopy
 from types import SimpleNamespace
-from typing import List, Union
 
 import numpy as np
 
@@ -16,10 +15,10 @@ from pypulseq.utils.tracing import trace, trace_enabled
 
 
 def add_gradients(
-    grads: List[SimpleNamespace],
+    grads: list[SimpleNamespace],
     max_grad: int = 0,
     max_slew: int = 0,
-    system: Union[Opts, None] = None,
+    system: Opts | None = None,
 ) -> SimpleNamespace:
     """
     Returns the superposition of several gradients.
