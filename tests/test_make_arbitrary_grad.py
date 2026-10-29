@@ -36,3 +36,37 @@ def test_oversampled_slew_violation(slew_fraction):
     # The error reports the slew rate in percent of max_slew.
     reported = float(re.search(r'Slew rate violation ([\d.]+)', str(err.value)).group(1))
     assert reported == pytest.approx(slew_fraction * 100)
+
+
+def test_channel_error():
+    with pytest.raises(ValueError, match='Invalid channel'):
+        make_arbitrary_grad('p', np.zeros(10))
+
+
+def test_waveform_ndim():
+    with pytest.raises(ValueError, match='waveform should have ndim=1'):
+        make_arbitrary_grad('x', np.zeros((2, 5)))
+
+
+def test_waveform_empty():
+    with pytest.raises(ValueError, match='waveform must not be empty'):
+        make_arbitrary_grad('x', np.zeros(0), first=0, last=0)
+
+
+def test_waveform_too_short():
+    # A single-sample waveform requires explicit first and last values
+    with pytest.raises(ValueError, match='at least 2 samples'):
+        make_arbitrary_grad('x', np.zeros(1))
+
+    g = make_arbitrary_grad('x', np.zeros(1), first=0, last=0)
+    assert g.type == 'grad'
+
+
+def test_oversampling_even_samples():
+    with pytest.raises(ValueError, match='odd number of samples'):
+        make_arbitrary_grad('x', np.zeros(10), oversampling=True)
+
+
+def test_negative_delay():
+    with pytest.raises(ValueError, match='Delay must be non-negative'):
+        make_arbitrary_grad('x', np.zeros(10), delay=-1e-6)

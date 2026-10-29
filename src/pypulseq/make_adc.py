@@ -1,4 +1,5 @@
 import itertools
+import numbers
 from math import ceil, floor, gcd, isclose, prod
 from types import SimpleNamespace
 from typing import List, Tuple, Union
@@ -27,20 +28,20 @@ def make_adc(
 
     Parameters
     ----------
-    num_samples: int
-        Number of readout samples.
-    system : Opts, default=Opts()
-        System limits. Default is a system limits object initialized to default values.
-    dwell : float, default=0
-        ADC dead time in seconds (s) after sampling.
-    duration : float, default=0
-        Duration in seconds (s) of ADC readout event with `num_samples` number of samples.
+    num_samples : int
+        Number of readout samples. Must be a positive integer.
     delay : float, default=0
         Delay in seconds (s) of ADC readout event.
+    duration : float, default=0
+        Duration in seconds (s) of ADC readout event with `num_samples` number of samples.
+    dwell : float, default=0
+        Dwell time in seconds (s) of ADC readout event, i.e. the time between samples.
     freq_offset : float, default=0
         Frequency offset in hertz (Hz) of ADC readout event.
     phase_offset : float, default=0
         Phase offset in radians (rad) of ADC readout event.
+    system : Opts, default=Opts()
+        System limits. Default is a system limits object initialized to default values.
     freq_ppm : float, default=0
         PPM frequency offset in parts per million (ppm) of ADC readout event.
     phase_ppm : float, default=0
@@ -57,14 +58,35 @@ def make_adc(
     Raises
     ------
     ValueError
+        If `num_samples` is not a positive integer.
+        If `dwell`, `duration` or `delay` is negative or not finite.
         If neither `dwell` nor `duration` are defined.
+        If `phase_modulation` does not have `num_samples` elements.
     """
     if system is None:
         system = Opts.default
 
+    if not isinstance(num_samples, numbers.Integral) or isinstance(num_samples, bool) or num_samples <= 0:
+        raise ValueError('num_samples must be a positive integer.')
+
+    if not np.isfinite(dwell) or dwell < 0:
+        raise ValueError('Dwell must be non-negative.')
+
+    if not np.isfinite(duration) or duration < 0:
+        raise ValueError('Duration must be non-negative.')
+
+    if not np.isfinite(delay) or delay < 0:
+        raise ValueError('Delay must be non-negative.')
+
+    if (dwell == 0 and duration == 0) or (dwell > 0 and duration > 0):
+        raise ValueError('Either dwell or duration must be defined')
+
+    if phase_modulation is not None and len(phase_modulation) != num_samples:
+        raise ValueError('ADC Phase modulation vector must have the same length as the number of samples')
+
     adc = SimpleNamespace()
     adc.type = 'adc'
-    adc.num_samples = num_samples
+    adc.num_samples = int(num_samples)
     adc.dwell = dwell
     adc.delay = delay
     adc.freq_offset = freq_offset
@@ -72,16 +94,11 @@ def make_adc(
     adc.freq_ppm = freq_ppm
     adc.phase_ppm = phase_ppm
     adc.dead_time = system.adc_dead_time
-
-    if (dwell == 0 and duration == 0) or (dwell > 0 and duration > 0):
-        raise ValueError('Either dwell or duration must be defined')
-
-    if phase_modulation is not None and len(phase_modulation) != num_samples:
-        raise ValueError('ADC Phase modulation vector must have the same length as the number of samples')
     adc.phase_modulation = phase_modulation
 
     if duration > 0:
         adc.dwell = duration / num_samples
+        adc.duration = duration
 
     if dwell > 0:
         adc.duration = dwell * num_samples

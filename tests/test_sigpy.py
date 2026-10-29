@@ -18,6 +18,34 @@ def test_sigpy_import():
             raise ModuleNotFoundError('SigPy is not installed.')
 
 
+def test_sigpy_pulse_opts_invalid_pulse_type():
+    with pytest.raises(ValueError, match="Invalid pulse_type parameter\\. Must be one of 'slr' or 'sms'"):
+        SigpyPulseOpts(pulse_type='bogus')
+
+
+@pytest.mark.sigpy
+def test_sigpy_n_seq_validation():
+    from pypulseq.make_sigpy_pulse import sigpy_n_seq
+
+    with pytest.raises(ValueError, match='RF pulse duration must be positive'):
+        sigpy_n_seq(flip_angle=np.pi / 2, duration=0, plot=False)
+
+    with pytest.raises(ValueError, match='RF pulse duration must be positive'):
+        sigpy_n_seq(flip_angle=np.pi / 2, duration=np.nan, plot=False)
+
+    with pytest.raises(ValueError, match='Delay must be non-negative'):
+        sigpy_n_seq(flip_angle=np.pi / 2, delay=-1e-6, plot=False)
+
+    with pytest.raises(ValueError, match=r'center_pos must be in the range \[0, 1\]'):
+        sigpy_n_seq(flip_angle=np.pi / 2, center_pos=1.5, plot=False)
+
+    with pytest.raises(ValueError, match='time_bw_product must be positive'):
+        sigpy_n_seq(flip_angle=np.pi / 2, time_bw_product=0, plot=False)
+
+    with pytest.raises(ValueError, match='Slice thickness must be provided'):
+        sigpy_n_seq(flip_angle=np.pi / 2, return_gz=True, slice_thickness=-1e-3, plot=False)
+
+
 @pytest.mark.sigpy
 def test_slr():
     import sigpy.mri.rf as sigpy_rf

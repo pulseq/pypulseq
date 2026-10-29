@@ -104,6 +104,10 @@ def check_timing(seq: Sequence) -> Tuple[bool, List[SimpleNamespace]]:
                 div_check(e.delay, raster, event=event, field='delay', raster=raster_str)
 
             if hasattr(e, 'duration'):
+                # the ADC delay must lie on the RF raster, but the duration (num_samples * dwell) on the ADC raster
+                if getattr(e, 'type', '') == 'adc':
+                    raster = seq.system.adc_raster_time
+                    raster_str = 'adc_raster_time'
                 div_check(e.duration, raster, event=event, field='duration', raster=raster_str)
 
             if hasattr(e, 'dwell'):
