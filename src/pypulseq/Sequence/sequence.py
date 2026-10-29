@@ -1,4 +1,5 @@
 import math
+import numbers
 from collections import OrderedDict
 from copy import deepcopy
 from types import SimpleNamespace
@@ -195,11 +196,11 @@ class Sequence:
         if not args:
             return
 
-        # Validate that no raw floats are passed directly by users
+        # Validate that no raw numeric values are passed directly by users
         for arg in args:
-            if isinstance(arg, float):
+            if isinstance(arg, numbers.Real):
                 raise ValueError(
-                    f'Raw float values are not allowed in add_block(). Use pp.make_delay({arg}) for delays.'
+                    f'Raw numeric values are not allowed in add_block(). Use pp.make_delay({arg}) for delays.'
                 )
 
         if trace_enabled():
@@ -1009,14 +1010,14 @@ class Sequence:
         ng = len(gw_data)
 
         # Gradient delay handling
-        if isinstance(trajectory_delay, (int, float)):
+        if isinstance(trajectory_delay, numbers.Real):
             gradient_delays = [trajectory_delay] * ng
         else:
             assert len(trajectory_delay) == ng  # Need to have same number of gradient channels
             gradient_delays = trajectory_delay
 
         # Gradient offset handling
-        if isinstance(gradient_offset, (int, float)):
+        if isinstance(gradient_offset, numbers.Real):
             gradient_offset = [gradient_offset] * ng
         else:
             assert len(gradient_offset) == ng  # Need to have same number of gradient channels

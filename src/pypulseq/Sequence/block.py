@@ -1,4 +1,5 @@
 import math
+import numbers
 import warnings
 from types import SimpleNamespace
 from typing import List, Tuple, Union
@@ -58,7 +59,7 @@ def set_block(self, block_index: int, *args: Union[SimpleNamespace, float]) -> N
     extensions = []
 
     for event in events:
-        if not isinstance(event, float):  # If event is not a block duration
+        if not isinstance(event, numbers.Real):  # If event is not a block duration
             if event.type == 'rf':
                 if new_block[1] != 0:
                     raise ValueError('Multiple RF events were specified in set_block')

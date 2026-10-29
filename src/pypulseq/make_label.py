@@ -1,3 +1,4 @@
+import numbers
 from types import SimpleNamespace
 from typing import Union
 
@@ -71,7 +72,7 @@ def make_label(label: str, type: str, value: Union[bool, float, int]) -> SimpleN
         raise ValueError(f'Invalid label. Must be one of {arr_supported_labels}.')
     if type not in ['SET', 'INC']:
         raise ValueError("Invalid type. Must be one of 'SET' or 'INC'.")
-    if not isinstance(value, (bool, float, int)):
+    if not isinstance(value, (numbers.Real, np.bool_)):
         raise ValueError('Must supply a valid numerical or logical value.')
     if not np.isfinite(value):
         raise ValueError('Label value must be finite.')
