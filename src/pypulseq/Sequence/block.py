@@ -486,7 +486,7 @@ def get_block(self, block_index: int, add_IDs: bool = False) -> SimpleNamespace:
             phase_shape = np.array([], dtype=float)
 
         adc = SimpleNamespace()
-        adc.num_samples = lib_data[0]
+        adc.num_samples = int(lib_data[0])
         adc.dwell = lib_data[1]
         adc.delay = lib_data[2]
         adc.freq_ppm = lib_data[3]
@@ -495,8 +495,8 @@ def get_block(self, block_index: int, add_IDs: bool = False) -> SimpleNamespace:
         adc.phase_offset = lib_data[6]
         adc.phase_modulation = phase_shape
         adc.dead_time = self.system.adc_dead_time
-        adc.num_samples = int(adc.num_samples)
         adc.type = 'adc'
+        adc.duration = adc.num_samples * adc.dwell
 
         if add_IDs:
             adc.id = raw_block.adc

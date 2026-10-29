@@ -66,8 +66,10 @@ def make_block_pulse(
     ------
     ValueError
         If invalid `use` parameter is passed.
-        One of bandwidth or duration must be defined, but not both.
-        One of bandwidth or duration must be defined and be > 0.
+        If both `bandwidth` and `duration` are defined.
+        If `duration`, `bandwidth` or `time_bw_product` is defined and not positive.
+        If `delay` is negative or not finite.
+
     """
     if system is None:
         system = Opts.default
@@ -76,27 +78,29 @@ def make_block_pulse(
     if use != '' and use not in valid_pulse_uses:
         raise ValueError(f'Invalid use parameter. Must be one of {valid_pulse_uses}. Passed: {use}')
 
+    if duration is not None and (not np.isfinite(duration) or duration <= 0):
+        raise ValueError('Duration must be positive.')
+
+    if bandwidth is not None and (not np.isfinite(bandwidth) or bandwidth <= 0):
+        raise ValueError('Bandwidth must be positive.')
+
+    if time_bw_product is not None and (not np.isfinite(time_bw_product) or time_bw_product <= 0):
+        raise ValueError('time_bw_product must be positive.')
+
+    if not np.isfinite(delay) or delay < 0:
+        raise ValueError('Delay must be non-negative.')
+
+    if duration is not None and bandwidth is not None:
+        raise ValueError('One of bandwidth or duration must be defined, but not both.')
+
     if duration is None and bandwidth is None:
         warn('Using default 4 ms duration for block pulse.')
         duration = 4e-3
-    elif duration is not None and bandwidth is not None and duration > 0:
-        # Multiple arguments
-        raise ValueError('One of bandwidth or duration must be defined, but not both.')
-    elif duration is not None and duration > 0:
-        # Explicitly handle this most expected case.
-        # There is probably a better way of writing this if block
-        pass
-    elif duration is None and bandwidth is not None and bandwidth > 0:
+    elif duration is None:
         if time_bw_product is not None and time_bw_product > 0:
             duration = time_bw_product / bandwidth
         else:
             duration = 1 / (4 * bandwidth)
-    else:
-        # Invalid arguments
-        raise ValueError(
-            'One of bandwidth or duration must be defined and be > 0. '
-            f'duration = {duration} s, bandwidth = {bandwidth} Hz.'
-        )
 
     n_samples = round(duration / system.rf_raster_time)
     t = np.array([0, n_samples]) * system.rf_raster_time
