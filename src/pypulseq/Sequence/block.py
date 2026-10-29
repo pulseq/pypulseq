@@ -227,7 +227,7 @@ def set_block(self, block_index: int, *args: Union[SimpleNamespace, float]) -> N
     self.block_durations[block_index] = float(duration)
 
 
-def get_raw_block_content_IDs(self, block_index: int) -> SimpleNamespace:
+def get_raw_block_content_IDs(self, block_index: int) -> SimpleNamespace:  # noqa: N802
     """
     Returns PyPulseq block content IDs at `block_index` position in `self.block_events`.
 
@@ -272,7 +272,7 @@ def get_raw_block_content_IDs(self, block_index: int) -> SimpleNamespace:
     return raw_block
 
 
-def get_block(self, block_index: int, add_IDs: bool = False) -> SimpleNamespace:
+def get_block(self, block_index: int, add_IDs: bool = False) -> SimpleNamespace:  # noqa: N803
     """
     Returns PyPulseq block at `block_index` position in `self.block_events`.
 
@@ -630,15 +630,15 @@ def register_grad_event(self, event: SimpleNamespace) -> Union[int, Tuple[int, L
 
         # Shape ID initialization
         if hasattr(event, 'shape_IDs'):
-            shape_IDs = event.shape_IDs
+            shape_ids = event.shape_IDs
         else:
-            shape_IDs = [0, 0]
+            shape_ids = [0, 0]
 
             # Shape for waveform
             g = event.waveform / amplitude if amplitude != 0 else event.waveform
             c_shape = compress_shape(g)
             s_data = np.concatenate(([c_shape.num_samples], c_shape.data))
-            shape_IDs[0], found = self.shape_library.find_or_insert(s_data)
+            shape_ids[0], found = self.shape_library.find_or_insert(s_data)
             may_exist = may_exist and found
             any_changed = any_changed or found
 
@@ -647,18 +647,18 @@ def register_grad_event(self, event: SimpleNamespace) -> Union[int, Tuple[int, L
             t_data = np.concatenate(([c_time.num_samples], c_time.data))
 
             if len(c_time.data) == 4 and np.allclose(c_time.data, [0.5, 1, 1, c_time.num_samples - 3]):
-                # Standard raster → leave shape_IDs[1] as 0
+                # Standard raster → leave shape_ids[1] as 0
                 pass
             elif len(c_time.data) == 3 and np.allclose(c_time.data, [0.5, 0.5, c_time.num_samples - 2]):
                 # Half-raster → set to -1 as special flag
-                shape_IDs[1] = -1
+                shape_ids[1] = -1
             else:
-                shape_IDs[1], found = self.shape_library.find_or_insert(t_data)
+                shape_ids[1], found = self.shape_library.find_or_insert(t_data)
                 may_exist = may_exist and found
                 any_changed = any_changed or found
 
         # Updated data layout to match MATLAB v1.5.0 ordering
-        data = (amplitude, event.first, event.last, *shape_IDs, event.delay)
+        data = (amplitude, event.first, event.last, *shape_ids, event.delay)
 
     elif event.type == 'trap':
         data = (
@@ -686,7 +686,7 @@ def register_grad_event(self, event: SimpleNamespace) -> Union[int, Tuple[int, L
         self.grad_id_to_name_map[grad_id] = event.name
 
     if event.type == 'grad':
-        return grad_id, shape_IDs
+        return grad_id, shape_ids
     elif event.type == 'trap':
         return grad_id
 
@@ -735,13 +735,13 @@ def register_soft_delay_event(self, event: SimpleNamespace) -> int:
     # Auto-assign numID based on hint - each unique hint gets a unique numID
     if event.hint in self.soft_delay_hints:
         # Reuse existing numID for this hint
-        assigned_numID = self.soft_delay_hints[event.hint]
-        if event.numID is not None and event.numID != assigned_numID:
+        assigned_num_id = self.soft_delay_hints[event.hint]
+        if event.numID is not None and event.numID != assigned_num_id:
             raise ValueError(
-                f"Soft delay hint '{event.hint}' is already assigned to numID {assigned_numID}. "
+                f"Soft delay hint '{event.hint}' is already assigned to numID {assigned_num_id}. "
                 f'Cannot use numID {event.numID}. Consider using a different hint or omitting numID.'
             )
-        event.numID = assigned_numID
+        event.numID = assigned_num_id
     else:
         # Assign new numID for this hint
         if event.numID is None:
@@ -789,28 +789,28 @@ def register_rf_event(self, event: SimpleNamespace) -> Tuple[int, List[int]]:
     may_exist = True
 
     if hasattr(event, 'shape_IDs'):
-        shape_IDs = event.shape_IDs
+        shape_ids = event.shape_IDs
     else:
-        shape_IDs = [0, 0, 0]
+        shape_ids = [0, 0, 0]
 
         mag_shape = compress_shape(mag)
         data = np.concatenate(([mag_shape.num_samples], mag_shape.data))
-        shape_IDs[0], found = self.shape_library.find_or_insert(data)
+        shape_ids[0], found = self.shape_library.find_or_insert(data)
         may_exist = may_exist & found
 
         phase_shape = compress_shape(phase)
         data = np.concatenate(([phase_shape.num_samples], phase_shape.data))
-        shape_IDs[1], found = self.shape_library.find_or_insert(data)
+        shape_ids[1], found = self.shape_library.find_or_insert(data)
         may_exist = may_exist & found
 
         t_regular = (np.floor(event.t / self.rf_raster_time) == np.arange(len(event.t))).all()
 
         if t_regular:
-            shape_IDs[2] = 0
+            shape_ids[2] = 0
         else:
             time_shape = compress_shape(event.t / self.rf_raster_time)
             data = [time_shape.num_samples, *time_shape.data]
-            shape_IDs[2], found = self.shape_library.find_or_insert(data)
+            shape_ids[2], found = self.shape_library.find_or_insert(data)
             may_exist = may_exist & found
 
     use = 'u'  # Undefined
@@ -830,7 +830,7 @@ def register_rf_event(self, event: SimpleNamespace) -> Tuple[int, List[int]]:
 
     data = (
         amplitude,
-        *shape_IDs,
+        *shape_ids,
         event.center,
         event.delay,
         event.freq_ppm,
@@ -852,4 +852,4 @@ def register_rf_event(self, event: SimpleNamespace) -> Tuple[int, List[int]]:
     if hasattr(event, 'name'):
         self.rf_id_to_name_map[rf_id] = event.name
 
-    return rf_id, shape_IDs
+    return rf_id, shape_ids

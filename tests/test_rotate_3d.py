@@ -99,16 +99,16 @@ def test_vs_rotate(axis, angle, grads):
 
 
 def test_oblique_rotation_and_inverse():
-    R = Rotation.from_rotvec(0.9 * np.array([0.5, 0.3, 0.6]) / np.linalg.norm([0.5, 0.3, 0.6])).as_matrix()
-    out = rotate_3d(gx_trap, rotation=R)
+    rot = Rotation.from_rotvec(0.9 * np.array([0.5, 0.3, 0.6]) / np.linalg.norm([0.5, 0.3, 0.6])).as_matrix()
+    out = rotate_3d(gx_trap, rotation=rot)
     assert len(out) == 3
     assert all(g.type == 'trap' for g in out)
     for j, g in enumerate(out):
-        assert g.amplitude == pytest.approx(R[j, 0] * gx_trap.amplitude, rel=1e-9)
+        assert g.amplitude == pytest.approx(rot[j, 0] * gx_trap.amplitude, rel=1e-9)
     amplitudes = np.array([g.amplitude for g in out])
     assert np.linalg.norm(amplitudes) == pytest.approx(abs(gx_trap.amplitude), rel=1e-9)
 
-    back = rotate_3d(*out, rotation=R.T)
+    back = rotate_3d(*out, rotation=rot.T)
     assert len(back) == 1
     assert back[0].channel == 'x'
     assert_grads_equal(back[0], gx_trap, abs_=1e-6 * abs(gx_trap.amplitude))
@@ -139,9 +139,9 @@ def test_block_and_list_input():
     seq = pp.Sequence()
     seq.add_block(rf, gx_trap, gz_trap, adc)
     block = seq.get_block(1)
-    R = rot_mat('x', 0.5)
-    a = rotate_3d(block, rotation=R)
-    b = rotate_3d(rf, gx_trap, gz_trap, adc, rotation=R)
+    rot = rot_mat('x', 0.5)
+    a = rotate_3d(block, rotation=rot)
+    b = rotate_3d(rf, gx_trap, gz_trap, adc, rotation=rot)
     # The block's block_duration is preserved as one extra delay event
     delays = [e for e in a if getattr(e, 'type', None) == 'delay']
     assert len(delays) == 1
@@ -160,9 +160,9 @@ def test_block_and_list_input():
     assert seq2.block_durations[1] == pytest.approx(seq.block_durations[1])
 
     # Nested call: rotate_3d(rotate_3d(...)) equals a single rotation by the combined matrix
-    R1, R2 = rot_mat('z', 0.4), rot_mat('x', -0.6)
-    nested = by_channel(rotate_3d(rotate_3d(gx_trap, gy_trap, rotation=R1), rotation=R2))
-    combined = by_channel(rotate_3d(gx_trap, gy_trap, rotation=R2 @ R1))
+    rot1, rot2 = rot_mat('z', 0.4), rot_mat('x', -0.6)
+    nested = by_channel(rotate_3d(rotate_3d(gx_trap, gy_trap, rotation=rot1), rotation=rot2))
+    combined = by_channel(rotate_3d(gx_trap, gy_trap, rotation=rot2 @ rot1))
     assert set(nested) == set(combined)
     for channel in nested:
         assert_grads_equal(nested[channel], combined[channel], abs_=1e-3)

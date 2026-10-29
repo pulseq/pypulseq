@@ -69,7 +69,7 @@ class Opts:
         adc_samples_divisor: Union[int, None] = None,
         rise_time: Union[float, None] = None,
         slew_unit: str = 'Hz/m/s',
-        B0: Union[float, None] = None,
+        B0: Union[float, None] = None,  # noqa: N803
     ):
         valid_grad_units = ['Hz/m', 'mT/m', 'rad/ms/mm']
         valid_slew_units = ['Hz/m/s', 'mT/m/ms', 'T/m/s', 'rad/ms/mm/ms']
@@ -121,7 +121,7 @@ class Opts:
         if adc_samples_divisor is None:
             adc_samples_divisor = Opts.default.adc_samples_divisor
         if B0 is None:
-            B0 = Opts.default.B0
+            B0 = Opts.default.B0  # noqa: N806
 
         self.max_grad = max_grad
         self.max_slew = max_slew

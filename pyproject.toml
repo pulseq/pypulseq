@@ -58,10 +58,10 @@ select = [
   "COM", # flake8-commas
   # "D",   # pydocstyle
   # "E",   # pycodestyle errors
-  "F", # Pyflakes
-  # "FA", # flake8-future-annotations
-  "I", # isort
-  # "N",   # pep8-naming
+  "F",   # Pyflakes
+  "FA",  # flake8-future-annotations
+  "I",   # isort
+  "N",   # pep8-naming
   "NPY", # NumPy-specific rules
   "RUF", # Ruff-specific rules
   "S",   # flake8-bandit
@@ -96,6 +96,9 @@ ignore = [
   "SIM108", #  if-else-block-instead-of-if-exp
   "SIM115", #  use of context manager
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"src/pypulseq/SAR/SAR_calc.py" = ["N999"]
 
 [tool.ruff.lint.isort]
 force-single-line = false

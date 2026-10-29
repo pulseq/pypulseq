@@ -461,7 +461,7 @@ class Sequence:
 
         return k_traj_adc, k_traj, t_excitation, t_refocusing, t_adc
 
-    def calculate_kspacePP(
+    def calculate_kspacePP(  # noqa: N802
         self,
         trajectory_delay: Union[float, List[float], np.ndarray] = 0,
         gradient_offset: Union[float, List[float], np.ndarray] = 0,
@@ -842,7 +842,7 @@ class Sequence:
         """
         self.mod_grad_axis(axis, modifier=-1)
 
-    def get_raw_block_content_IDs(self, block_index: int) -> SimpleNamespace:
+    def get_raw_block_content_IDs(self, block_index: int) -> SimpleNamespace:  # noqa: N802
         """
         Returns PyPulseq block content IDs at `block_index` position in `self.block_events`.
 
@@ -908,7 +908,7 @@ class Sequence:
         else:
             return ''
 
-    def get_extension_type_ID(self, extension_string: str, update: bool = True) -> int:
+    def get_extension_type_ID(self, extension_string: str, update: bool = True) -> int:  # noqa: N802
         """
         Get numeric extension ID for `extension_string`. Will automatically create a new ID if unknown.
 
@@ -1593,7 +1593,7 @@ class Sequence:
 
         self.definitions[key] = value
 
-    def set_extension_string_ID(self, extension_str: str, extension_id: int) -> None:
+    def set_extension_string_ID(self, extension_str: str, extension_id: int) -> None:  # noqa: N802
         """
         Set numeric ID for the given string extension ID.
 
@@ -1662,25 +1662,25 @@ class Sequence:
         """
 
         # Go through all the blocks and update durations, at the same time checking the consistency of the soft delays
-        sd_str2numID = {}
-        sd_numID2hint = {}
+        sd_str2num_id = {}
+        sd_num_id2hint = {}
         sd_warns = {}
         for block_counters in self.block_events:
             block = self.get_block(block_counters)
             if block.soft_delay is not None:
                 # Check the numeric ID consistency
-                if block.soft_delay.hint not in sd_str2numID:
-                    sd_str2numID[block.soft_delay.hint] = block.soft_delay.numID
+                if block.soft_delay.hint not in sd_str2num_id:
+                    sd_str2num_id[block.soft_delay.hint] = block.soft_delay.numID
                 else:
-                    if sd_str2numID[block.soft_delay.hint] != block.soft_delay.numID:
+                    if sd_str2num_id[block.soft_delay.hint] != block.soft_delay.numID:
                         raise ValueError(
                             f"Soft delay in block {block_counters} with numeric ID {block.soft_delay.numID} and string hint '{block.soft_delay.hint}' is inconsistent with the previous occurrences of the same string hint"
                         )
 
-                if block.soft_delay.numID not in sd_numID2hint:
-                    sd_numID2hint[block.soft_delay.numID] = block.soft_delay.hint
+                if block.soft_delay.numID not in sd_num_id2hint:
+                    sd_num_id2hint[block.soft_delay.numID] = block.soft_delay.hint
                 else:
-                    if sd_numID2hint[block.soft_delay.numID] != block.soft_delay.hint:
+                    if sd_num_id2hint[block.soft_delay.numID] != block.soft_delay.hint:
                         raise ValueError(
                             f"Soft delay in block {block_counters} with numeric ID {block.soft_delay.numID} and string hint '{block.soft_delay.hint}' is inconsistent with the previous occurrences of the same numeric ID"
                         )
@@ -1716,8 +1716,8 @@ class Sequence:
         # Now check if there are some input soft delays which haven't been found in the sequence
         all_input_hints = kwargs.keys()
         for hint in all_input_hints:
-            if hint not in sd_str2numID:
-                available_hints = list(sd_str2numID.keys())
+            if hint not in sd_str2num_id:
+                available_hints = list(sd_str2num_id.keys())
                 raise ValueError(
                     f"Soft delay '{hint}' not found in sequence. "
                     f'Available soft delays: {available_hints if available_hints else "none"}'
@@ -1760,7 +1760,7 @@ class Sequence:
         """
         return ext_test_report_data(self)
 
-    def waveforms(self, append_RF: bool = False, time_range: Union[List[float], None] = None) -> Tuple[np.ndarray]:
+    def waveforms(self, append_RF: bool = False, time_range: Union[List[float], None] = None) -> Tuple[np.ndarray]:  # noqa: N803
         """
         Decompress the entire gradient waveform. Returns gradient waveforms as a tuple of `np.ndarray` of
         `gradient_axes` (typically 3) dimensions. Each `np.ndarray` contains timepoints and the corresponding
@@ -1931,7 +1931,9 @@ class Sequence:
         return wave_data
 
     def waveforms_and_times(
-        self, append_RF: bool = False, time_range: Union[List[float], None] = None
+        self,
+        append_RF: bool = False,  # noqa: N803
+        time_range: Union[List[float], None] = None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Decompress the entire gradient waveform. Returns gradient waveforms as a tuple of `np.ndarray` of

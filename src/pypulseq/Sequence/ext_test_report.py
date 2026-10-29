@@ -74,18 +74,18 @@ def ext_test_report_data(self) -> Dict[str, Any]:
 
     if len(t_excitation) != 0:
         t_ex_tmp = t_excitation[t_excitation < t_echo]
-        TE = t_echo - t_ex_tmp[-1]
+        te = t_echo - t_ex_tmp[-1]
     else:
-        TE = np.nan
+        te = np.nan
 
     if len(t_excitation) < 2:
-        TR = duration
+        tr = duration
     else:
         t_ex_tmp1 = t_excitation[t_excitation > t_echo]
         if len(t_ex_tmp1) == 0:
-            TR = t_ex_tmp[-1] - t_ex_tmp[-2]
+            tr = t_ex_tmp[-1] - t_ex_tmp[-2]
         else:
-            TR = t_ex_tmp1[0] - t_ex_tmp[-1]
+            tr = t_ex_tmp1[0] - t_ex_tmp[-1]
 
     # Check sequence dimensionality and spatial resolution
     k_extent = np.max(np.abs(k_traj_adc), axis=1)
@@ -215,8 +215,8 @@ def ext_test_report_data(self) -> Dict[str, Any]:
             'delay': int(event_count[0]),
         },
         'duration': duration,
-        'TE': TE,
-        'TR': TR,
+        'TE': te,
+        'TR': tr,
         'flip_angles_deg': list(flip_angles_deg),
         'unique_k_positions': unique_k_positions,
         'max_gradient': {

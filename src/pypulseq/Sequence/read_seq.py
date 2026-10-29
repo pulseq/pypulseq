@@ -410,11 +410,11 @@ def read(self, path: str, detect_rf_use: Union[bool, None] = None, remove_duplic
                         grad_prev_last[j] = grad.last
 
                     # Recover amplitude from library data
-                    amplitude_ID = event_idx[j + 2]
-                    if j > 0 and any(processed_grad_ids[: j + 1] == amplitude_ID):
+                    amplitude_id = event_idx[j + 2]
+                    if j > 0 and any(processed_grad_ids[: j + 1] == amplitude_id):
                         continue  # avoid repeated updates if the same gradient is applied on different gradient axes
-                    processed_grad_ids[j] = amplitude_ID
-                    amplitude = self.grad_library.data[amplitude_ID][0]
+                    processed_grad_ids[j] = amplitude_id
+                    amplitude = self.grad_library.data[amplitude_id][0]
 
                     # Update the grad_library with the new grad.first and grad.last values
                     new_data = (
@@ -425,7 +425,7 @@ def read(self, path: str, detect_rf_use: Union[bool, None] = None, remove_duplic
                         grad.time_id,
                         grad.delay,
                     )
-                    self.grad_library.update_data(amplitude_ID, None, new_data, 'g')
+                    self.grad_library.update_data(amplitude_id, None, new_data, 'g')
 
                 else:
                     grad_prev_last[j] = 0.0
