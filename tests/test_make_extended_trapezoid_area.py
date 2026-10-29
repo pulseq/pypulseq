@@ -217,3 +217,24 @@ def test_make_extended_trapezoid_area_raises_when_invalid_duration():
         make_extended_trapezoid_area(
             channel='x', grad_start=0, grad_end=0, area=100000, duration=-0.1e-6, system=system
         )
+
+    with pytest.raises(ValueError, match='Duration must be a positive number'):
+        make_extended_trapezoid_area(channel='x', grad_start=0, grad_end=0, area=100000, duration=np.nan, system=system)
+
+
+def test_make_extended_trapezoid_area_raises_on_nonfinite_input():
+    """Test that non-finite area, grad_start or grad_end raise ValueError."""
+    with pytest.raises(ValueError, match='`area` must be a finite number'):
+        make_extended_trapezoid_area(channel='x', grad_start=0, grad_end=0, area=np.nan, system=system)
+
+    with pytest.raises(ValueError, match='`grad_start` and `grad_end` must be finite'):
+        make_extended_trapezoid_area(channel='x', grad_start=np.inf, grad_end=0, area=100, system=system)
+
+
+def test_make_extended_trapezoid_area_raises_when_endpoints_exceed_max_grad():
+    """Test that grad_start/grad_end above max_grad raise instead of looping forever."""
+    with pytest.raises(ValueError, match='must not exceed `max_grad`'):
+        make_extended_trapezoid_area(channel='x', grad_start=system.max_grad * 2, grad_end=0, area=100, system=system)
+
+    with pytest.raises(ValueError, match='must not exceed `max_grad`'):
+        make_extended_trapezoid_area(channel='x', grad_start=0, grad_end=-system.max_grad * 2, area=100, system=system)

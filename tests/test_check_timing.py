@@ -65,7 +65,8 @@ def test_check_timing():
     gx = pp.make_trapezoid(channel='x', area=1, rise_time=1e-6, flat_time=1e-3, fall_time=3e-6, system=system)
     seq.add_block(gx)  # Block 8: RASTER
 
-    gx = pp.make_trapezoid(channel='x', area=1, duration=1e-3, delay=-1e-5, system=system)
+    gx = pp.make_trapezoid(channel='x', area=1, duration=1e-3, system=system)
+    gx.delay = -1e-5  # Introduce a negative delay timing error
     seq.add_block(gx)  # Block 9: NEGATIVE_DELAY
 
     # Check timing errors

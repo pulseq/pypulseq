@@ -45,9 +45,9 @@ def make_gauss_pulse(
     flip_angle : float
         Flip angle in radians (rad).
     apodization : float, default=0
-        Apodization.
+        Apodization factor, must be in the range [0, 1].
     bandwidth : float, default=0
-        Bandwidth in hertz (Hz).
+        Bandwidth in hertz (Hz). If set to 0, will be derived from `time_bw_product`.
     center_pos : float, default=0.5
         Position of RF peak between 0 and 1, where 0 means the
         beginning of the pulse and 1 means the end of the pulse.
@@ -97,6 +97,10 @@ def make_gauss_pulse(
     ------
     ValueError
         If invalid `use` is passed.
+        If `duration` is not positive or not finite.
+        If `dwell` or `delay` is negative or not finite.
+        If `center_pos` or `apodization` is not in the range [0, 1].
+        If `bandwidth` is negative, or `time_bw_product` is not positive and `bandwidth` is not provided.
         If `return_gz=True` and `slice_thickness` was not passed.
     """
     if system is None:
@@ -106,13 +110,31 @@ def make_gauss_pulse(
     if use != '' and use not in valid_pulse_uses:
         raise ValueError(f'Invalid use parameter. Must be one of {valid_pulse_uses}. Passed: {use}')
 
+    if not np.isfinite(duration) or duration <= 0:
+        raise ValueError('RF pulse duration must be positive.')
+
+    if not np.isfinite(dwell) or dwell < 0:
+        raise ValueError('Dwell must be non-negative.')
+
+    if not np.isfinite(delay) or delay < 0:
+        raise ValueError('Delay must be non-negative.')
+
+    if not np.isfinite(center_pos) or not 0 <= center_pos <= 1:
+        raise ValueError('center_pos must be in the range [0, 1].')
+
+    if not np.isfinite(apodization) or not 0 <= apodization <= 1:
+        raise ValueError('apodization must be in the range [0, 1].')
+
+    if not np.isfinite(bandwidth) or bandwidth < 0:
+        raise ValueError('Bandwidth must be non-negative.')
+
     if dwell == 0:
         dwell = system.rf_raster_time
 
     if bandwidth == 0:
+        if not np.isfinite(time_bw_product) or time_bw_product <= 0:
+            raise ValueError('time_bw_product must be positive if `bandwidth` is not provided.')
         bandwidth = time_bw_product / duration
-    else:
-        bandwidth = bandwidth
     alpha = apodization
     n_samples = round(duration / dwell)
     t = (np.arange(1, n_samples + 1) - 0.5) * dwell
@@ -139,7 +161,7 @@ def make_gauss_pulse(
         rf.use = use
 
     if return_gz:
-        if slice_thickness == 0:
+        if not np.isfinite(slice_thickness) or slice_thickness <= 0:
             raise ValueError('Slice thickness must be provided if return_gz is True')
 
         if max_grad > 0:
