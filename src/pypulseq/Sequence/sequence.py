@@ -17,6 +17,7 @@ from scipy.interpolate import PPoly
 
 from pypulseq import __version__, eps
 from pypulseq.calc_rf_center import calc_rf_center
+from pypulseq.calc_rf_power import calc_rf_power
 from pypulseq.check_timing import check_timing as ext_check_timing
 from pypulseq.check_timing import print_error_report
 from pypulseq.decompress_shape import decompress_shape
@@ -348,6 +349,167 @@ class Sequence:
             stacklevel=2,
         )
         return self.calculate_kspace(trajectory_delay, gradient_offset, output_as_dict=output_as_dict)
+
+    def calc_rf_power(
+        self,
+        time_range: Union[Tuple[float, float], List[float], None] = None,
+        block_range: Union[Tuple[int, int], List[int], None] = None,
+        window_duration: Union[float, None] = None,
+        dt: Union[float, None] = 1e-6,
+    ) -> Tuple[float, float, float, float]:
+        """
+        Calculate the relative RF power of a sequence.
+
+        Aggregates RF power metrics over the RF events contained in the sequence blocks. The calculation can optionally be
+        restricted to a subset of the sequence, either as a time interval in seconds (`time_range`) or as a range of 1-based
+        block indices (`block_range`, equivalent to the 'blockRange' option of `Sequence.calcRfPower` in MATLAB Pulseq). With
+        `window_duration`, worst-case metrics over a sliding time window are computed instead.
+
+        Returns relative RF energy, mean power, peak power, and RMS B1 amplitude.
+
+        Parameters
+        ----------
+        time_range : tuple or list of float, optional
+            Time interval (start, end) in seconds over which RF power is evaluated. Blocks that only partially overlap with the
+            interval contribute their RF energy scaled by the fraction of the block inside the interval. Mutually exclusive with
+            `block_range`. Default: the entire sequence.
+        block_range : tuple or list of int, optional
+            1-based block index interval (start, end), both inclusive; `end` may be `numpy.inf` to select all remaining blocks.
+            Only whole blocks are counted, like in MATLAB Pulseq. Mutually exclusive with `time_range`. Default: all blocks.
+        window_duration : float or None, default=None
+            If provided and finite, computes the maximum RF energy, mean power, and RMS amplitude over any sliding window of
+            this duration (in seconds). The window boundaries are rounded up to a whole number of blocks, while `mean_pwr` and
+            `rf_rms` are divided by the nominal `window_duration`, which may lead to a slight overestimation (as in MATLAB
+            Pulseq). This mimics SAR-style worst-case windowing.
+        dt : float or None, default=1e-6
+            Resampling step in s passed to `calc_rf_power`. See `pypulseq.calc_rf_power` for details.
+
+        Returns
+        -------
+        mean_pwr : float
+            Mean RF power in Hz**2 over the specified range or window.
+        peak_pwr : float
+            Peak RF power in Hz**2.
+        rf_rms : float
+            RMS B1 amplitude in Hz.
+        total_energy : float
+            Total RF energy in Hz (= Hz**2 * s).
+
+        Notes
+        -----
+        The power and RF amplitude calculated by this function are relative, as they are expressed in units of Hz**2 or Hz.
+        The RF amplitude can be converted to Tesla by dividing the resulting value by gamma. Correspondingly, the power can
+        be converted to mT**2 * s by dividing the given value by gamma**2.
+
+        Absolute SAR depends on the electric field distribution and therefore on both the transmit coil design and
+        subject-specific loading. As a result, these values must be scaled by appropriate coil- and subject-dependent
+        factors to obtain absolute SAR.
+        """
+        if time_range is not None and block_range is not None:
+            raise ValueError('Specify either time_range or block_range, not both.')
+
+        numeric = (int, float, np.integer, np.floating)
+
+        if time_range is not None and (
+            not isinstance(time_range, (tuple, list))
+            or len(time_range) != 2
+            or not all(isinstance(x, numeric) for x in time_range)
+            or time_range[0] > time_range[1]
+        ):
+            raise ValueError('time_range must be a pair (start, end) of times in seconds with start <= end.')
+
+        if block_range is None:
+            block_start, block_end = 1, np.inf
+        elif (
+            not isinstance(block_range, (tuple, list))
+            or len(block_range) != 2
+            or not all(isinstance(x, numeric) for x in block_range)
+        ):
+            raise ValueError('block_range must be a pair (start, end) of 1-based block indices.')
+        else:
+            block_start = int(block_range[0])
+            block_end = int(block_range[1]) if np.isfinite(block_range[1]) else len(self.block_events)
+            if block_start < 1 or block_start > block_end or block_end > len(self.block_events):
+                raise ValueError(
+                    f'Invalid block_range {tuple(block_range)}: must satisfy 1 <= start <= end <= '
+                    f'{len(self.block_events)} (number of blocks).'
+                )
+
+        window_on = window_duration is not None and np.isfinite(window_duration)
+        if window_on:
+            if window_duration <= 0:
+                raise ValueError('window_duration must be > 0.')
+            # (energy, rf_ms, duration) contribution of each block inside the window
+            bookkeeping = []
+            current_window_dur = 0.0
+            current_window_start = 0
+            total_energy_max = 0.0
+            rf_ms_max = 0.0
+
+        t0 = 0.0
+        dur = 0.0
+        total_energy = 0.0
+        peak_pwr = 0.0
+        rf_ms = 0.0  # sum of rms^2 * duration, i.e. the integrated squared RF amplitude
+        for block_pos, block_counter in enumerate(self.block_events):
+            block_duration = self.block_durations[block_counter]
+
+            if time_range is not None:
+                # fraction of the block overlapping with time_range
+                contrib_dur = max(0.0, min(t0 + block_duration, time_range[1]) - max(t0, time_range[0]))
+            elif block_start <= block_pos + 1 <= block_end:
+                contrib_dur = block_duration
+            else:
+                contrib_dur = 0.0
+
+            # Update current position
+            t0 += block_duration
+
+            if contrib_dur <= 0:
+                continue
+            dur += contrib_dur
+            frac = contrib_dur / block_duration  # == 1 unless restricted by time_range
+
+            block = self.get_block(block_counter)
+
+            block_energy = 0.0
+            block_ms = 0.0
+            if block.rf is not None:
+                energy, peak, rms = calc_rf_power(block.rf, dt=dt)
+                block_energy = energy * frac
+                block_ms = rms**2 * block.rf.shape_dur * frac
+                total_energy += block_energy
+                rf_ms += block_ms
+                peak_pwr = max(peak_pwr, peak)
+
+                if window_on:
+                    # compare against the max before trimming the window back
+                    # below window_duration: the window is effectively rounded
+                    # up to a whole number of blocks (as in MATLAB Pulseq)
+                    total_energy_max = max(total_energy_max, total_energy)
+                    rf_ms_max = max(rf_ms_max, rf_ms)
+
+            # keep track of the window width and shorten it if needed
+            if window_on:
+                bookkeeping.append((block_energy, block_ms, contrib_dur))
+                current_window_dur += contrib_dur
+                while current_window_dur > window_duration:
+                    e0, ms0, d0 = bookkeeping[current_window_start]
+                    total_energy -= e0
+                    rf_ms -= ms0
+                    current_window_dur -= d0
+                    current_window_start += 1
+
+        if window_on:
+            total_energy = total_energy_max
+            # we divide here by the nominal window duration, which may lead to a slight overestimation
+            mean_pwr = total_energy / window_duration
+            rf_rms = np.sqrt(rf_ms_max / window_duration)
+        else:
+            mean_pwr = total_energy / dur if dur > 0 else np.nan
+            rf_rms = np.sqrt(rf_ms / dur) if dur > 0 else np.nan
+
+        return mean_pwr, peak_pwr, rf_rms, total_energy
 
     def calculate_pns(
         self,

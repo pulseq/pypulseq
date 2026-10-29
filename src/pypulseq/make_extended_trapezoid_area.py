@@ -61,8 +61,11 @@ def make_extended_trapezoid_area(
     Raises
     ------
     ValueError
-        If no solution was found that satisfies the constraints and the desired area (and duration, if given).
+        If invalid `channel` is passed. Must be one of 'x', 'y' or 'z'.
+        If `area`, `grad_start` or `grad_end` is not finite.
+        If `grad_start` or `grad_end` exceeds `max_grad`.
         If `duration` is not None and is not a positive number.
+        If no solution was found that satisfies the constraints and the desired area (and duration, if given).
     """
     if system is None:
         system = Opts.default
@@ -76,7 +79,16 @@ def make_extended_trapezoid_area(
     if max_slew is None:
         max_slew = system.max_slew
 
-    if duration is not None and duration <= 0:
+    if not np.isfinite(area):
+        raise ValueError('`area` must be a finite number.')
+
+    if not np.isfinite(grad_start) or not np.isfinite(grad_end):
+        raise ValueError('`grad_start` and `grad_end` must be finite.')
+
+    if abs(grad_start) > max_grad + eps or abs(grad_end) > max_grad + eps:
+        raise ValueError('`grad_start` and `grad_end` must not exceed `max_grad`.')
+
+    if duration is not None and (not np.isfinite(duration) or duration <= 0):
         raise ValueError('Duration must be a positive number.')
 
     raster_time = system.grad_raster_time

@@ -74,6 +74,53 @@ def test_return_gz_requires_slice_thickness():
             slice_thickness=0,
         )
 
+    with pytest.raises(ValueError, match=r'Slice thickness must be provided if return_gz is True'):
+        make_gauss_pulse(
+            flip_angle=1,
+            duration=1e-3,
+            delay=0,
+            return_gz=True,
+            slice_thickness=-1e-3,
+        )
+
+
+def test_invalid_duration():
+    for invalid in [0, -1e-3, np.nan, np.inf]:
+        with pytest.raises(ValueError, match='RF pulse duration must be positive'):
+            make_gauss_pulse(flip_angle=1, duration=invalid)
+
+
+def test_negative_dwell():
+    with pytest.raises(ValueError, match='Dwell must be non-negative'):
+        make_gauss_pulse(flip_angle=1, dwell=-1e-6)
+
+
+def test_negative_delay():
+    with pytest.raises(ValueError, match='Delay must be non-negative'):
+        make_gauss_pulse(flip_angle=1, delay=-1e-6)
+
+
+def test_invalid_center_pos():
+    for invalid in [-0.1, 1.5, np.nan]:
+        with pytest.raises(ValueError, match=r'center_pos must be in the range \[0, 1\]'):
+            make_gauss_pulse(flip_angle=1, center_pos=invalid)
+
+
+def test_invalid_apodization():
+    for invalid in [-0.1, 1.5, np.nan]:
+        with pytest.raises(ValueError, match=r'apodization must be in the range \[0, 1\]'):
+            make_gauss_pulse(flip_angle=1, apodization=invalid)
+
+
+def test_invalid_bandwidth():
+    with pytest.raises(ValueError, match='Bandwidth must be non-negative'):
+        make_gauss_pulse(flip_angle=1, bandwidth=-1e3)
+
+
+def test_invalid_time_bw_product():
+    with pytest.raises(ValueError, match='time_bw_product must be positive'):
+        make_gauss_pulse(flip_angle=1, bandwidth=0, time_bw_product=0)
+
 
 def test_flip_angle_normalization():
     flip_angle = 0.9
