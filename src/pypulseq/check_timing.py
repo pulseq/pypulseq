@@ -1,3 +1,4 @@
+import numbers
 from types import SimpleNamespace
 from typing import Any, List, Tuple
 
@@ -72,7 +73,7 @@ def check_timing(seq: Sequence) -> Tuple[bool, List[SimpleNamespace]]:
 
         # Check block events
         for event, e in block.__dict__.items():
-            if e is None or isinstance(e, (float, int)):  # Special handling for block_duration
+            if e is None or isinstance(e, numbers.Real):  # Special handling for block_duration
                 continue
             elif not isinstance(e, (dict, SimpleNamespace)):
                 raise ValueError('Wrong data type of variable arguments, list[SimpleNamespace] expected.')

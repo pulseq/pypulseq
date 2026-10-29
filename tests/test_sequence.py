@@ -382,6 +382,21 @@ def test_remove_duplicates_oversampled_grad():
     assert ok, errors
 
 
+def test_calculate_kspace_numpy_scalar_args():
+    # Numpy scalars are accepted for trajectory_delay and gradient_offset
+    seq = pp.Sequence()
+    seq.add_block(pp.make_trapezoid('x', area=1000, duration=1e-3))
+    seq.add_block(pp.make_delay(1e-3))
+
+    expected = seq.calculate_kspace(trajectory_delay=0, gradient_offset=0)
+    actual = seq.calculate_kspace(trajectory_delay=np.int64(0), gradient_offset=np.int32(0))
+    for a, b in zip(actual, expected):
+        if isinstance(a, np.ndarray):
+            np.testing.assert_allclose(a, b)
+        else:
+            assert a == b
+
+
 # Main Sequence test class
 # Note that pytest creates a new instance of the TestSequence class for each
 # test. To prevent calling seq_func() over and over, we assign it as a class
