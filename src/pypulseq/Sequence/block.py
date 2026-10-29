@@ -303,7 +303,7 @@ def get_block(self, block_index: int, add_IDs: bool = False) -> SimpleNamespace:
     block = SimpleNamespace()
     attrs = ['block_duration', 'rf', 'gx', 'gy', 'gz', 'adc', 'label', 'soft_delay']
     values = [None] * len(attrs)
-    for att, val in zip(attrs, values):
+    for att, val in zip(attrs, values, strict=True):
         setattr(block, att, val)
     raw_block = get_raw_block_content_IDs(self, block_index)
 

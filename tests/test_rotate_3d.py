@@ -52,7 +52,7 @@ def test_identity():
     out = rotate_3d(gx_trap, gy_trap, gz_trap, rotation=np.eye(3))
     assert len(out) == 3
     assert [g.channel for g in out] == ['x', 'y', 'z']
-    for rotated, original in zip(out, (gx_trap, gy_trap, gz_trap)):
+    for rotated, original in zip(out, (gx_trap, gy_trap, gz_trap), strict=True):
         assert_grads_equal(rotated, original)
     # Inputs are not modified
     assert [g.amplitude for g in (gx_trap, gy_trap, gz_trap)] == amplitudes

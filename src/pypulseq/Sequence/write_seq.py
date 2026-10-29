@@ -381,7 +381,7 @@ def write_v141(self, file_name: Union[str, Path], create_signature, remove_dupli
             for k in self.rf_library.data:
                 lib = self.rf_library.data[k]
                 data1 = lib[0:4]
-                data2 = tuple(a + b * ppm_to_hz for a, b in zip(lib[8:10], lib[6:8]))
+                data2 = tuple(a + b * ppm_to_hz for a, b in zip(lib[8:10], lib[6:8], strict=True))
                 delay = round(lib[5] / self.rf_raster_time) * self.rf_raster_time * 1e6
                 s = id_format_str.format(k, *data1, delay, *data2)
                 output_file.write(s)
@@ -439,7 +439,7 @@ def write_v141(self, file_name: Union[str, Path], create_signature, remove_dupli
             for k in self.adc_library.data:
                 lib = self.adc_library.data[k]
                 data1 = (lib[0], lib[1] * 1e9, lib[2] * 1e6)
-                data2 = tuple(a + b * ppm_to_hz for a, b in zip(lib[5:7], lib[3:5]))
+                data2 = tuple(a + b * ppm_to_hz for a, b in zip(lib[5:7], lib[3:5], strict=True))
                 s = id_format_str.format(k, *data1, *data2)
                 output_file.write(s)
             output_file.write('\n')
