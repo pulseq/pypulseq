@@ -197,7 +197,7 @@ def test_raw_float_rejection():
     # Test that raw floats are rejected
     with pytest.raises(
         ValueError,
-        match=r'Raw float values are not allowed in add_block\(\)\. Use pp.make_delay\(0.001\) for delays\.',
+        match=r'Raw numeric values are not allowed in add_block\(\)\. Use pp.make_delay\(0.001\) for delays\.',
     ):
         seq.add_block(1e-3)
 

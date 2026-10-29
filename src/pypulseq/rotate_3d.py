@@ -1,3 +1,4 @@
+import numbers
 from types import SimpleNamespace
 from typing import List, Union
 
@@ -109,7 +110,7 @@ def rotate_3d(
     for event in events:
         if event is None:
             continue
-        if isinstance(event, (float, int)):
+        if isinstance(event, numbers.Real):
             bypass.append(make_delay(event))  # block_duration of a block passed as input
             continue
         if getattr(event, 'type', None) not in ('grad', 'trap'):

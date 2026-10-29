@@ -133,3 +133,13 @@ def test_plot_rf_plot_with_overlay():
     assert id(sp2.fig1) == id(sp1.fig1)
 
     plt.close('all')
+
+
+def test_plot_numpy_scalar_time_range():
+    """Test that numpy scalars are accepted in time_range."""
+    plt.close('all')
+    seq = create_test_sequence()
+
+    seq.plot(time_range=(np.int64(0), np.int64(1)), show_blocks=False, plot_now=False)
+
+    plt.close('all')

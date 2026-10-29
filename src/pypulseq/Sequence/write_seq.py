@@ -1,4 +1,5 @@
 import hashlib
+import numbers
 from pathlib import Path
 from typing import Union
 from warnings import warn
@@ -67,11 +68,11 @@ def write(self, file_name: Union[str, Path], create_signature, remove_duplicates
                 output_file.write(f'{keys[block_counter]} ')
                 if isinstance(values[block_counter], str):
                     output_file.write(values[block_counter] + ' ')
-                elif isinstance(values[block_counter], (int, float)):
+                elif isinstance(values[block_counter], numbers.Real):
                     output_file.write(f'{values[block_counter]:0.9g} ')
                 elif isinstance(values[block_counter], (list, tuple, np.ndarray)):  # e.g. [FOV_x, FOV_y, FOV_z]
                     for i in range(len(values[block_counter])):
-                        if isinstance(values[block_counter][i], (int, float)):
+                        if isinstance(values[block_counter][i], numbers.Real):
                             output_file.write(f'{values[block_counter][i]:0.9g} ')
                         else:
                             output_file.write(f'{values[block_counter][i]} ')
@@ -337,11 +338,11 @@ def write_v141(self, file_name: Union[str, Path], create_signature, remove_dupli
                 output_file.write(f'{keys[block_counter]} ')
                 if isinstance(values[block_counter], str):
                     output_file.write(values[block_counter] + ' ')
-                elif isinstance(values[block_counter], (int, float)):
+                elif isinstance(values[block_counter], numbers.Real):
                     output_file.write(f'{values[block_counter]:0.9g} ')
                 elif isinstance(values[block_counter], (list, tuple, np.ndarray)):  # e.g. [FOV_x, FOV_y, FOV_z]
                     for i in range(len(values[block_counter])):
-                        if isinstance(values[block_counter][i], (int, float)):
+                        if isinstance(values[block_counter][i], numbers.Real):
                             output_file.write(f'{values[block_counter][i]:0.9g} ')
                         else:
                             output_file.write(f'{values[block_counter][i]} ')

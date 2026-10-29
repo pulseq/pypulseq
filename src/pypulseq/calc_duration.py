@@ -1,3 +1,4 @@
+import numbers
 from types import SimpleNamespace
 from typing import Union
 
@@ -41,7 +42,7 @@ def calc_duration(*args: Union[SimpleNamespace, dict, float, int, None]) -> floa
     for event in events:
         if event is None:
             continue
-        if isinstance(event, (float, int)):  # block_duration field
+        if isinstance(event, numbers.Real):  # block_duration field
             assert duration <= event
             duration = event
             continue
