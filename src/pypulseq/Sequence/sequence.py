@@ -2,7 +2,7 @@ import math
 from collections import OrderedDict
 from copy import deepcopy
 from types import SimpleNamespace
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Literal, Tuple, Union
 from warnings import warn
 
 try:
@@ -89,6 +89,8 @@ class Sequence:
         self.set_definition('BlockDurationRaster', self.block_duration_raster)
         self.set_definition('GradientRasterTime', self.grad_raster_time)
         self.set_definition('RadiofrequencyRasterTime', self.rf_raster_time)
+        self.grad_check_data_prev = SimpleNamespace(valid_for_block_num=0, last_grad_vals=[0, 0, 0])
+        self.grad_check_data_next = SimpleNamespace(valid_for_block_num=0, first_grad_vals=[0, 0, 0])
         self.signature_type = ''
         self.signature_file = ''
         self.signature_value = ''
@@ -167,13 +169,13 @@ class Sequence:
 
         return t_adc, fp_adc
 
-    def add_block(self, *args: SimpleNamespace) -> None:
+    def add_block(self, *args: Union[SimpleNamespace, None]) -> None:
         """
         Add a new block/multiple events to the sequence.
 
         Parameters
         ----------
-        *args : SimpleNamespace
+        *args : Union[SimpleNamespace, None]
             Event objects to be added as a block to the sequence. For delays,
             use `pypulseq.make_delay()` instead of raw float values.
 
@@ -185,6 +187,13 @@ class Sequence:
         pypulseq.make_sinc_pulse : Create sinc RF pulse events
         pypulseq.make_soft_delay : Create soft delay events
         """
+        # Remove None values from args
+        args = tuple(a for a in args if a is not None)
+
+        # If no args remain, return without doing anything
+        if not args:
+            return
+
         # Validate that no raw floats are passed directly by users
         for arg in args:
             if isinstance(arg, float):
@@ -736,7 +745,7 @@ class Sequence:
         else:
             return ''
 
-    def get_extension_type_ID(self, extension_string: str) -> int:
+    def get_extension_type_ID(self, extension_string: str, update: bool = True) -> int:
         """
         Get numeric extension ID for `extension_string`. Will automatically create a new ID if unknown.
 
@@ -744,6 +753,8 @@ class Sequence:
         ----------
         extension_string : str
             Given string extension ID.
+        update : bool, default=True
+            If string is not found and update is true, update extension map.
 
         Returns
         -------
@@ -757,9 +768,11 @@ class Sequence:
             else:
                 extension_id = 1 + max(self.extension_numeric_idx)
 
-            self.extension_numeric_idx.append(extension_id)
-            self.extension_string_idx.append(extension_string)
-            assert len(self.extension_numeric_idx) == len(self.extension_string_idx)
+            if update:
+                self.extension_numeric_idx.append(extension_id)
+                self.extension_string_idx.append(extension_string)
+                if len(self.extension_numeric_idx) != len(self.extension_string_idx):
+                    raise ValueError('Length of extension numeric ID and extension string do not match')
         else:
             num = self.extension_string_idx.index(extension_string)
             extension_id = self.extension_numeric_idx[num]
@@ -1016,7 +1029,7 @@ class Sequence:
         gx_color: str = 'blue',
         gy_color: str = 'red',
         gz_color: Tuple[float] = (0, 0.5, 0.3),
-        rf_plot: str = 'abs',
+        rf_plot: Literal['abs', 'real', 'imag'] = 'abs',
     ):
         """
         Plot sequence using paper-style formatting (minimalist, high-contrast layout).
@@ -1039,7 +1052,9 @@ class Sequence:
         gz_color : color, default=(0, 0.5, 0.3)
             Color for gradient Z waveform.
         rf_plot : {'abs', 'real', 'imag'}, default='abs'
-            Determines how to plot RF waveforms (magnitude, real or imaginary part).
+            Determines how to plot the RF waveforms.
+            If 'abs', plots magnitude for all RF events.
+            If 'real' or 'imag', plots the respective component for all RF events.
 
         """
         ext_paper_plot(self, time_range, line_width, axes_color, rf_color, gx_color, gy_color, gz_color, rf_plot)
@@ -1057,6 +1072,7 @@ class Sequence:
         overlay: SeqPlot = None,
         stacked: bool = False,
         show_guides: bool = False,
+        rf_plot: Literal['auto', 'abs', 'real', 'imag'] = 'auto',
     ) -> SeqPlot:
         """
         Plot `Sequence`.
@@ -1090,6 +1106,11 @@ class Sequence:
             If False, use separate figures for RF/ADC and gradients.
         show_guides : bool, default=False
             If True, enable dynamic vertical hairline guides that follow the cursor. Requires `mplcursors`.
+        rf_plot : {'auto', 'abs', 'real', 'imag'}, default='auto'
+            Determines how to plot the RF waveforms.
+            If 'auto', plots magnitude for all RF events except those that are purely real or imaginary, which are plotted as such.
+            If 'abs', plots magnitude for all RF events.
+            If 'real' or 'imag', plots the respective component for all RF events.
 
         Returns
         -------
@@ -1109,6 +1130,7 @@ class Sequence:
             overlay,
             stacked,
             show_guides,
+            rf_plot=rf_plot,
         )
 
     def read(self, file_path: str, detect_rf_use: bool = False, remove_duplicates: bool = True) -> None:
@@ -1117,9 +1139,10 @@ class Sequence:
 
         Parameters
         ----------
-        detect_rf_use
         file_path : str
             Path to `.seq` file to be read.
+        detect_rf_use : bool, default=False
+            If True, try to infer intended use of the RF pulses if `use` attributes are not set.
         remove_duplicates : bool, default=True
             Remove duplicate events from the sequence after reading.
         """
@@ -1179,7 +1202,9 @@ class Sequence:
         for grad_id in seq_copy.grad_library.data:
             if seq_copy.grad_library.type[grad_id] == 'g':
                 data = seq_copy.grad_library.data[grad_id]
-                new_data = (*data[0:3], mapping[data[3]], mapping[data[4]], data[5])
+                # Time shape ID -1 marks oversampling (no shape library entry) and must not be remapped
+                time_id = mapping[data[4]] if data[4] > 0 else data[4]
+                new_data = (*data[0:3], mapping[data[3]], time_id, data[5])
                 if data != new_data:
                     seq_copy.grad_library.update(grad_id, None, new_data)
 
@@ -1332,7 +1357,7 @@ class Sequence:
 
                 full_freq_offset = rf.freq_offset + rf.freq_ppm * 1e-6 * self.system.gamma * self.system.B0
                 full_phase_offset = rf.phase_offset + rf.phase_ppm * 1e-6 * self.system.gamma * self.system.B0
-                full_phase_offset = full_phase_offset + 2 * math.pi * full_freq_offset * tc
+                full_phase_offset += 2 * math.pi * full_freq_offset * tc
 
                 if not hasattr(rf, 'use') or block.rf.use in [
                     'excitation',

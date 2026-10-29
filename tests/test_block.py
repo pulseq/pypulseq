@@ -1,3 +1,4 @@
+import numpy as np
 import pypulseq as pp
 import pytest
 
@@ -9,9 +10,26 @@ gx_endshigh = pp.make_extended_trapezoid('x', amplitudes=[0, 100000, 100000], ti
 gx_startshigh = pp.make_extended_trapezoid('x', amplitudes=[100000, 100000, 0], times=[0, 1e-4, 2e-4])
 gx_startshigh2 = pp.make_extended_trapezoid('x', amplitudes=[200000, 100000, 0], times=[0, 1e-4, 2e-4])
 gx_allhigh = pp.make_extended_trapezoid('x', amplitudes=[100000, 100000, 100000], times=[0, 1e-4, 2e-4])
+gx_oversampled = pp.make_arbitrary_grad(
+    'x', 10000 * np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 2, 1]), first=0, last=0, oversampling=True
+)
 delay = pp.make_delay(1e-3)
 
-## Test gradient continuity checks in add_block
+
+def test_add_block_none_only_noop():
+    seq = pp.Sequence()
+    seq.add_block(None)
+    assert len(seq.block_events) == 0
+
+
+def test_add_block_ignores_none():
+    seq1 = pp.Sequence()
+    seq1.add_block(pp.make_delay(1))
+
+    seq2 = pp.Sequence()
+    seq2.add_block(None, pp.make_delay(1), None)
+
+    assert list(seq1.block_durations.values()) == list(seq2.block_durations.values())
 
 
 def test_gradient_continuity1():
@@ -171,6 +189,59 @@ def test_gradient_continuity_setblock7():
     seq.set_block(7, gx_startshigh)
 
     assert list(seq.block_events.keys()) == [10, 5, 7]
+
+
+def test_gradient_continuity_setblock8():
+    # Overwrite the last block with a gradient that ends high: No error expected (same as add_block, see continuity10)
+    seq = pp.Sequence()
+    seq.add_block(gx_trap)
+    seq.add_block(gx_trap)
+    seq.set_block(2, gx_endshigh)
+
+
+def test_gradient_continuity_setblock9():
+    # Overwrite a middle block with a gradient that connects on both sides: No error expected
+    seq = pp.Sequence()
+    seq.add_block(gx_endshigh)
+    seq.add_block(gx_allhigh)
+    seq.add_block(gx_startshigh)
+    seq.set_block(2, gx_allhigh)
+
+    # Continue appending afterwards: block 3 ends at zero, so a trapezoid is fine ...
+    seq.add_block(gx_trap)
+
+    # Overwriting block 3 with a gradient that ends high is not allowed, because block 4 starts at zero
+    with pytest.raises(RuntimeError):
+        seq.set_block(3, gx_allhigh)
+
+
+def test_gradient_continuity_zero_duration_block():
+    # Gradient ends high and is followed by a block of zero duration (label only): must raise like continuity7
+    with pytest.raises(RuntimeError):
+        seq = pp.Sequence()
+        seq.add_block(gx_endshigh)
+        seq.add_block(pp.make_label(label='LIN', type='SET', value=1))  # raises
+
+
+def test_gradient_continuity_first_block_noncontiguous():
+    # First block of an empty sequence starts high, even with non-contiguous numbering: must raise
+    with pytest.raises(RuntimeError):
+        seq = pp.Sequence()
+        seq.set_block(10, gx_startshigh)
+
+
+def test_get_block_oversampled_grad():
+    # get_block returns the oversampled gradient that was added, with the same timing
+    seq = pp.Sequence()
+    seq.add_block(gx_oversampled)
+    gx = seq.get_block(1).gx
+
+    assert gx.shape_dur == pytest.approx(gx_oversampled.shape_dur)
+    assert np.allclose(gx.tt, gx_oversampled.tt)
+    assert gx.area == pytest.approx(gx_oversampled.area)
+
+    ok, errors = seq.check_timing()
+    assert ok, errors
 
 
 # TODO: Add other block functionality tests

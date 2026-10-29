@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 from typing import Union
 
-from pypulseq.supported_labels_rf_use import get_supported_labels
+from pypulseq.supported_labels_rf_use import LABEL_FLAGS, get_supported_labels
 
 
 def make_label(label: str, type: str, value: Union[bool, float, int]) -> SimpleNamespace:  # noqa: A002
@@ -41,6 +41,9 @@ def make_label(label: str, type: str, value: Union[bool, float, int]) -> SimpleN
 
             -'TRID' (counter): marks the beginning of a repeatable module in the sequence (e.g. TR).
 
+        Custom labels can be registered with `pypulseq.add_supported_label()` and are treated as counters,
+        i.e. both 'SET' and 'INC' are allowed for them.
+
         Label type. Must be one of 'SET' or 'INC' (not compatible with flags).
      value : bool, float or int
         Label value.
@@ -58,7 +61,6 @@ def make_label(label: str, type: str, value: Union[bool, float, int]) -> SimpleN
         If `value` was not a valid numerical or logical value.
     """
     arr_supported_labels = get_supported_labels()
-    arr_flags = arr_supported_labels[10:-1]
 
     if label not in arr_supported_labels:
         raise ValueError(f'Invalid label. Must be one of {arr_supported_labels}.')
@@ -71,8 +73,10 @@ def make_label(label: str, type: str, value: Union[bool, float, int]) -> SimpleN
     if type == 'SET':
         out.type = 'labelset'
     elif type == 'INC':
-        if label in arr_flags:
-            raise ValueError(f'As per Pulseq specification, labelinc is not compatible with flags: {arr_flags}.')
+        if label in LABEL_FLAGS:
+            raise ValueError(
+                f'As per Pulseq specification, labelinc is not compatible with flags: {tuple(LABEL_FLAGS)}.'
+            )
         out.type = 'labelinc'
 
     out.label = label
