@@ -27,7 +27,7 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
   "Operating System :: OS Independent",
 ]
-dependencies = ["matplotlib>=3.5.2", "numpy>=1.19.5", "scipy>=1.8.1"]
+dependencies = ["matplotlib>=3.5.2", "numpy>=1.23", "scipy>=1.14"]
 
 [project.optional-dependencies]
 sigpy = ["sigpy>=0.1.26"]

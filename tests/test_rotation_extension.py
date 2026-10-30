@@ -15,7 +15,7 @@ from scipy.spatial.transform import Rotation
 
 def rot_mat_from_quat(q):
     """Rotation matrix of a scalar-first quaternion [w, x, y, z]."""
-    return Rotation.from_quat(np.asarray(q)[[1, 2, 3, 0]]).as_matrix()
+    return Rotation.from_quat(np.asarray(q), scalar_first=True).as_matrix()
 
 
 # ----------------------------------------------------------------------
@@ -55,14 +55,41 @@ def test_make_rotation_rot_matrix():
     rot_mat = Rotation.from_euler('yzx', [0.3, -0.5, 1.1]).as_matrix()
     rot = pp.make_rotation(rot_matrix=rot_mat)
     np.testing.assert_allclose(rot_mat_from_quat(rot.rot_quaternion), rot_mat, atol=1e-12)
-    # canonical sign: scalar part >= 0
-    assert rot.rot_quaternion[0] >= 0
+
+
+@pytest.mark.parametrize(
+    'kwargs_a,kwargs_b',
+    [
+        ({'phi': -np.pi / 2}, {'phi': 3 * np.pi / 2}),  # [-pi, pi) vs [0, 2pi) convention
+        ({'phi': -0.3}, {'phi': 2 * np.pi - 0.3}),
+        ({'phi': -np.pi}, {'phi': np.pi}),  # w == 0: sign decided by the first non-zero component
+        ({'phi': 4.0, 'theta': 0.2}, {'phi': 4.0 - 2 * np.pi, 'theta': 0.2}),
+        ({'axis': [0, 1, 0], 'angle': 0.5}, {'axis': [0, -1, 0], 'angle': -0.5}),
+        ({'quaternion': [-0.5, 0.5, 0.5, 0.5]}, {'quaternion': [0.5, -0.5, -0.5, -0.5]}),
+        ({'quaternion': [0, 0, 0, -1]}, {'quaternion': [0, 0, 0, 1]}),
+        ({'phi': np.pi}, {'quaternion': [0, 0, 0, 1]}),
+        ({'rot_matrix': Rotation.from_euler('z', 4.0).as_matrix()}, {'phi': 4.0}),
+    ],
+)
+def test_make_rotation_canonical_sign(kwargs_a, kwargs_b):
+    # Inputs describing the same rotation yield identical quaternions (w >= 0, or first non-zero component > 0)
+    q_a = pp.make_rotation(**kwargs_a).rot_quaternion
+    q_b = pp.make_rotation(**kwargs_b).rot_quaternion
+    np.testing.assert_allclose(q_a, q_b, atol=1e-12)
+    assert q_a[np.flatnonzero(np.abs(q_a) > 1e-12)[0]] > 0
+    np.testing.assert_allclose(rot_mat_from_quat(q_a), rot_mat_from_quat(q_b), atol=1e-12)
 
 
 def test_make_rotation_scipy_rotation():
     r = Rotation.from_euler('x', -0.6)
     rot = pp.make_rotation(rotation=r)
     np.testing.assert_allclose(rot_mat_from_quat(rot.rot_quaternion), r.as_matrix(), atol=1e-12)
+
+
+def test_make_rotation_no_negative_zero():
+    # Canonicalization must not introduce -0.0 components (they would show up as '-0' when formatted)
+    q = pp.make_rotation(phi=3 * np.pi / 2).rot_quaternion
+    assert not any(np.signbit(v) for v in q if v == 0)
 
 
 def test_make_rotation_input_validation():
