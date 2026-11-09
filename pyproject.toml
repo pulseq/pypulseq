@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -15,44 +15,33 @@ maintainers = [
 ]
 description = "Pulseq in Python"
 readme = "README.md"
-license = { file = "LICENSE" }
-requires-python = ">=3.8"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
 classifiers = [
   "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Operating System :: OS Independent",
 ]
-dependencies = [
-  "coverage>=6.2",
-  "matplotlib>=3.5.2",
-  "numpy>=1.19.5",
-  "scipy>=1.8.1",
-]
+dependencies = ["matplotlib>=3.5.2", "numpy>=1.19.5", "scipy>=1.8.1"]
 
 [project.optional-dependencies]
 sigpy = ["sigpy>=0.1.26"]
 mplcursors = ["mplcursors"]
 Qt = ["PySide6"]
-test = [
-  "coverage",
-  "codecov",
-  "pre-commit",
-  "pytest",
-  "pytest-cov<6.1",
-  "pytest-xdist",
-]
+test = ["pre-commit", "pytest", "pytest-cov", "pytest-xdist"]
 docs = ["sphinx", "jinja2", "furo", "recommonmark"]
 
 [project.urls]
-Homepage = "https://github.com/imr-framework/pypulseq"
-Issues = "https://github.com/imr-framework/pypulseq/issues"
-Documentation = "https://pypulseq.readthedocs.io/en/latest/"
+Homepage = "https://github.com/pulseq/pypulseq"
+Issues = "https://github.com/pulseq/pypulseq/issues"
 
 [tool.setuptools]
 include-package-data = true
-
-[tool.setuptools.dynamic]
-version = { attr = "version.__version__" }
 
 [tool.ruff]
 line-length = 120
@@ -69,15 +58,15 @@ select = [
   "COM", # flake8-commas
   # "D",   # pydocstyle
   # "E",   # pycodestyle errors
-  "F", # Pyflakes
-  # "FA", # flake8-future-annotations
-  "I", # isort
-  # "N",   # pep8-naming
+  "F",   # Pyflakes
+  "FA",  # flake8-future-annotations
+  "I",   # isort
+  "N",   # pep8-naming
   "NPY", # NumPy-specific rules
   "RUF", # Ruff-specific rules
   "S",   # flake8-bandit
   "SIM", # flake8-simplify
-  # "UP",  # pyupgrade
+  "UP",  # pyupgrade
   "PIE", # flake8-pie
   "PTH", # flake8-use-pathlib
   "Q",   # flake8-quotes
@@ -88,12 +77,12 @@ select = [
 
 extend-select = [
   # "ANN001", #  type annotation for function argument
-  # # "ANN201", #  return type annotation public function
-  # # "ANN205", #  return type annotation static method
-  # # "ANN401", #  any type annotation
-  # # "BLE001", #  blind exception
-  # # "D107",   #  missing docstring in __init__
-  # # "D417",   #  undocumented-parameter
+  # "ANN201", #  return type annotation public function
+  # "ANN205", #  return type annotation static method
+  # "ANN401", #  any type annotation
+  # "BLE001", #  blind exception
+  # "D107",   #  missing docstring in __init__
+  # "D417",   #  undocumented-parameter
 ]
 
 ignore = [
@@ -107,6 +96,9 @@ ignore = [
   "SIM108", #  if-else-block-instead-of-if-exp
   "SIM115", #  use of context manager
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"src/pypulseq/SAR/SAR_calc.py" = ["N999"]
 
 [tool.ruff.lint.isort]
 force-single-line = false

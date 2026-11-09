@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from typing import List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,8 +10,8 @@ from pypulseq.utils.siemens.readasc import readasc
 
 
 def calc_pns(
-    obj: Sequence, hardware: SimpleNamespace, time_range: Union[List[float], None] = None, do_plots: bool = True
-) -> Tuple[bool, np.ndarray, np.ndarray, np.ndarray]:
+    obj: Sequence, hardware: SimpleNamespace, time_range: list[float] | None = None, do_plots: bool = True
+) -> tuple[bool, np.ndarray, np.ndarray, np.ndarray]:
     """
     Calculate PNS using safe model implementation by Szczepankiewicz and Witzel
     See http://github.com/filip-szczepankiewicz/safe_pns_prediction

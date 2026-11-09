@@ -1,6 +1,5 @@
 import numbers
 from types import SimpleNamespace
-from typing import Union
 
 import numpy as np
 
@@ -9,7 +8,7 @@ from pypulseq.utils.tracing import trace, trace_enabled
 
 def make_soft_delay(
     hint: str,
-    numID: Union[int, None] = None,
+    numID: int | None = None,  # noqa: N803
     offset: float = 0.0,
     factor: float = 1.0,
     default_duration: float = 10e-6,

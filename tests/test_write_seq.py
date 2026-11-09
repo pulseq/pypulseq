@@ -2,6 +2,7 @@
 
 import hashlib
 
+import numpy as np
 import pypulseq as pp
 import pytest
 
@@ -25,3 +26,23 @@ def test_write_seq_line_endings_and_signature(tmp_path, v141_compat):
     body, signature = content.split(b'\n[SIGNATURE]\n')
     assert hashlib.md5(body).hexdigest() == md5
     assert f'Hash {md5}'.encode() in signature
+
+
+@pytest.mark.parametrize(
+    'definition_value,expected_substring,v141_compat',
+    [
+        (np.int64(64), 'Nx 64', False),
+        (np.int64(64), 'Nx 64', True),
+        ([np.int64(64), np.int32(32)], 'Nx 64 32', False),
+    ],
+)
+def test_write_definitions_numpy_scalars(tmp_path, definition_value, expected_substring, v141_compat):
+    # Numpy scalars are accepted in sequence definitions
+    seq = pp.Sequence()
+    seq.add_block(pp.make_trapezoid('x', area=1000))
+    seq.set_definition('Nx', definition_value)
+
+    file_name = tmp_path / 'test.seq'
+    seq.write(file_name, v141_compat=v141_compat)
+
+    assert expected_substring in file_name.read_text()

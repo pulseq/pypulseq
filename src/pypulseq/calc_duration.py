@@ -1,10 +1,10 @@
+import numbers
 from types import SimpleNamespace
-from typing import Union
 
 from pypulseq.block_to_events import block_to_events
 
 
-def calc_duration(*args: Union[SimpleNamespace, dict, float, int, None]) -> float:
+def calc_duration(*args: SimpleNamespace | dict | float | int | None) -> float:
     """
     Calculate the duration of one or more events (or an event block).
 
@@ -41,7 +41,7 @@ def calc_duration(*args: Union[SimpleNamespace, dict, float, int, None]) -> floa
     for event in events:
         if event is None:
             continue
-        if isinstance(event, (float, int)):  # block_duration field
+        if isinstance(event, numbers.Real):  # block_duration field
             assert duration <= event
             duration = event
             continue

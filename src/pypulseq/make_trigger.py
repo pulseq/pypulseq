@@ -1,7 +1,6 @@
 # inserted for trigger support by mveldmann
 
 from types import SimpleNamespace
-from typing import Union
 
 import numpy as np
 
@@ -12,7 +11,7 @@ def make_trigger(
     channel: str,
     delay: float = 0.0,
     duration: float = 0.0,
-    system: Union[Opts, None] = None,
+    system: Opts | None = None,
 ) -> SimpleNamespace:
     """
     Create a trigger halt event for a synchronization with an external signal from a given channel with an optional

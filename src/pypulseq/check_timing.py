@@ -1,5 +1,6 @@
+import numbers
 from types import SimpleNamespace
-from typing import Any, List, Tuple
+from typing import Any
 
 from pypulseq import Sequence, eps
 from pypulseq.calc_duration import calc_duration
@@ -20,8 +21,8 @@ error_messages = {
 }
 
 
-def check_timing(seq: Sequence) -> Tuple[bool, List[SimpleNamespace]]:
-    error_report: List[SimpleNamespace] = []
+def check_timing(seq: Sequence) -> tuple[bool, list[SimpleNamespace]]:
+    error_report: list[SimpleNamespace] = []
 
     def div_check(a: float, b: float, event: str, field: str, raster: str):
         """
@@ -72,7 +73,7 @@ def check_timing(seq: Sequence) -> Tuple[bool, List[SimpleNamespace]]:
 
         # Check block events
         for event, e in block.__dict__.items():
-            if e is None or isinstance(e, (float, int)):  # Special handling for block_duration
+            if e is None or isinstance(e, numbers.Real):  # Special handling for block_duration
                 continue
             elif not isinstance(e, (dict, SimpleNamespace)):
                 raise ValueError('Wrong data type of variable arguments, list[SimpleNamespace] expected.')
@@ -245,7 +246,7 @@ def indent_string(x: str, n: int = 2) -> str:
 
 def print_error_report(
     seq: Sequence,
-    error_report: List[SimpleNamespace],
+    error_report: list[SimpleNamespace],
     full_report: bool = False,
     max_errors: int = 10,
     colored: bool = True,

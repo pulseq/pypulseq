@@ -32,6 +32,22 @@ def test_add_block_ignores_none():
     assert list(seq1.block_durations.values()) == list(seq2.block_durations.values())
 
 
+def test_set_block_numpy_int_duration():
+    # A numpy integer is accepted as block duration in set_block
+    seq = pp.Sequence()
+    seq.add_block(gx_trap)
+    seq.set_block(3, np.int64(1), gx_trap)
+    assert seq.block_durations[3] == 1
+
+
+@pytest.mark.parametrize('duration', [1e-3, 1, np.int64(1), np.float32(1e-3)])
+def test_add_block_raw_number_raises(duration):
+    # Raw numeric values are rejected in add_block (use pp.make_delay instead)
+    seq = pp.Sequence()
+    with pytest.raises(ValueError, match='Raw numeric values'):
+        seq.add_block(duration, gx_trap)
+
+
 def test_gradient_continuity1():
     # Trap followed by extended gradient: No error
     seq = pp.Sequence()

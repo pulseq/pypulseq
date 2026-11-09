@@ -94,5 +94,5 @@ seq.write('read_test2.seq')
 
 # The amplitude of the first rf pulse is reduced due to the reduced flip-angle. Notice the reduction is not exactly a
 # factor of two due to the windowing function.
-amp1_in_Hz = max(abs(seq.get_block(1).rf.signal))
-amp2_in_Hz = max(abs(seq.get_block(6).rf.signal))
+amp1_in_hz = max(abs(seq.get_block(1).rf.signal))
+amp2_in_hz = max(abs(seq.get_block(6).rf.signal))

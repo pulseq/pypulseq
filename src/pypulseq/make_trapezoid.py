@@ -1,7 +1,7 @@
 import math
 import warnings
 from types import SimpleNamespace
-from typing import Literal, Union
+from typing import Literal
 
 import numpy as np
 
@@ -43,17 +43,17 @@ def calculate_shortest_rise_time(amplitude: float, max_slew: float, grad_raster_
 
 def make_trapezoid(
     channel: str,
-    amplitude: Union[float, None] = None,
-    area: Union[float, None] = None,
+    amplitude: float | None = None,
+    area: float | None = None,
     delay: float = 0.0,
-    duration: Union[float, None] = None,
-    fall_time: Union[float, None] = None,
-    flat_area: Union[float, None] = None,
-    flat_time: Union[float, None] = None,
-    max_grad: Union[float, None] = None,
-    max_slew: Union[float, None] = None,
-    rise_time: Union[float, None] = None,
-    system: Union[Opts, None] = None,
+    duration: float | None = None,
+    fall_time: float | None = None,
+    flat_area: float | None = None,
+    flat_time: float | None = None,
+    max_grad: float | None = None,
+    max_slew: float | None = None,
+    rise_time: float | None = None,
+    system: Opts | None = None,
 ) -> SimpleNamespace:
     """
     Create a trapezoidal gradient event.

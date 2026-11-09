@@ -2,6 +2,7 @@
 
 from itertools import combinations_with_replacement
 
+import numpy as np
 import pypulseq as pp
 import pytest
 
@@ -60,3 +61,10 @@ def test_calc_duration_event_combinations2(name, events, expected_total_dur):
 @pytest.mark.parametrize('name,events,expected_total_dur', list(known_duration_event_zoo_combos(3)))
 def test_calc_duration_event_combinations3(name, events, expected_total_dur):
     assert pp.calc_duration(*events) == expected_total_dur
+
+
+@pytest.mark.parametrize('duration', [1, 1.0, np.int64(1), np.float32(1.0)])
+def test_calc_duration_block_duration_numbers(duration):
+    # Numeric block durations are accepted, including numpy scalars
+    gx = pp.make_trapezoid('x', area=1000, duration=1e-3)
+    assert pp.calc_duration(duration, gx) == 1

@@ -1,14 +1,14 @@
 from matplotlib.colors import LinearSegmentedColormap
 
 
-def main(N: int) -> LinearSegmentedColormap:
+def main(n: int) -> LinearSegmentedColormap:
     """
     Returns a Parula colormap to be used with matplotlib's `cycler`. `cm_data` has values copied from MATLAB for
     `parula(64)`.
 
     Parameters
     ----------
-    N : int
+    n : int
         Number of RGB quantization levels.
 
     Returns
@@ -83,4 +83,4 @@ def main(N: int) -> LinearSegmentedColormap:
         [0.9769, 0.9839, 0.0805],
     ]
 
-    return LinearSegmentedColormap.from_list(name='parula', colors=cm_data, N=N)
+    return LinearSegmentedColormap.from_list(name='parula', colors=cm_data, N=n)

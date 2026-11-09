@@ -61,73 +61,73 @@ def dummy_sequence():
 
 def test_constant_rf(dummy_rf):
     """Test constant amplitude pulse against analytic solution."""
-    A = 2.0
-    T = 4.0e-3
-    rf = dummy_rf(amplitude=A, duration=T)
+    amplitude = 2.0
+    duration = 4.0e-3
+    rf = dummy_rf(amplitude=amplitude, duration=duration)
 
-    E, P, rms = pp.calc_rf_power(rf)
+    energy, power, rms = pp.calc_rf_power(rf)
 
-    assert np.isclose(E, A**2 * T)
-    assert np.isclose(P, A**2)
-    assert np.isclose(rms, A)
+    assert np.isclose(energy, amplitude**2 * duration)
+    assert np.isclose(power, amplitude**2)
+    assert np.isclose(rms, amplitude)
 
 
 def test_nonuniform_raster(dummy_rf):
     """Test nonuniformly sampled RF returns correct energy."""
-    A = 2.0
+    amplitude = 2.0
     t = [0.0e-3, 2.0e-3]  # nonuniform time samples
-    rf = dummy_rf(amplitude=A, t_override=t)
+    rf = dummy_rf(amplitude=amplitude, t_override=t)
 
-    E, P, rms = pp.calc_rf_power(rf)
+    energy, power, rms = pp.calc_rf_power(rf)
 
-    assert np.isclose(E, A**2 * (t[-1] - t[0]))
-    assert np.isclose(P, A**2)
-    assert np.isclose(rms, A)
+    assert np.isclose(energy, amplitude**2 * (t[-1] - t[0]))
+    assert np.isclose(power, amplitude**2)
+    assert np.isclose(rms, amplitude)
 
 
 def test_resampled_rf(dummy_rf):
     """Test resampling path with dt parameter."""
-    A = 2.0
+    amplitude = 2.0
     t = [0.0e-3, 2.0e-3]  # nonuniform time samples
-    rf = dummy_rf(amplitude=A, t_override=t)
+    rf = dummy_rf(amplitude=amplitude, t_override=t)
 
-    E, P, rms = pp.calc_rf_power(rf, dt=pp.Opts.default.rf_raster_time)
+    energy, power, rms = pp.calc_rf_power(rf, dt=pp.Opts.default.rf_raster_time)
 
-    assert np.isclose(E, A**2 * (t[-1] - t[0]), rtol=1e-3)
-    assert np.isclose(P, A**2, rtol=1e-3)
-    assert np.isclose(rms, A, rtol=1e-3)
+    assert np.isclose(energy, amplitude**2 * (t[-1] - t[0]), rtol=1e-3)
+    assert np.isclose(power, amplitude**2, rtol=1e-3)
+    assert np.isclose(rms, amplitude, rtol=1e-3)
 
 
 def test_sequence_single_block(dummy_rf, dummy_sequence):
     """Test sequence with a single RF block."""
     seq = dummy_sequence
-    A = 2.0
-    T = 5.0
-    rf = dummy_rf(amplitude=A, duration=T)
+    amplitude = 2.0
+    duration = 5.0
+    rf = dummy_rf(amplitude=amplitude, duration=duration)
     seq.add_block(rf)
 
     mean_pwr, peak, rms, energy = seq.calc_rf_power()
 
-    assert np.isclose(energy, A**2 * T)
-    assert np.isclose(mean_pwr, A**2)
-    assert np.isclose(rms, A)
-    assert np.isclose(peak, A**2)
+    assert np.isclose(energy, amplitude**2 * duration)
+    assert np.isclose(mean_pwr, amplitude**2)
+    assert np.isclose(rms, amplitude)
+    assert np.isclose(peak, amplitude**2)
 
 
 def test_sequence_partial_overlap(dummy_rf, dummy_sequence):
     """Test sequence block partially overlapping time_range."""
     seq = dummy_sequence
-    A = 2.0
-    T = 10.0e-3
-    rf = dummy_rf(amplitude=A, duration=T)
+    amplitude = 2.0
+    duration = 10.0e-3
+    rf = dummy_rf(amplitude=amplitude, duration=duration)
     seq.add_block(rf)
 
     mean_pwr, _, rms, energy = seq.calc_rf_power(time_range=(2.0e-3, 6.0e-3))
 
     # Only 4s of 10s contribute
-    assert np.isclose(energy, A**2 * 4.0e-3)
-    assert np.isclose(mean_pwr, A**2)
-    assert np.isclose(rms, A)
+    assert np.isclose(energy, amplitude**2 * 4.0e-3)
+    assert np.isclose(mean_pwr, amplitude**2)
+    assert np.isclose(rms, amplitude)
 
 
 def test_sequence_sliding_window(dummy_rf, dummy_sequence):
@@ -171,15 +171,15 @@ def test_sequence_sliding_window(dummy_rf, dummy_sequence):
 
 def test_native_integration_dt_none(dummy_rf):
     """Test the dt=None path, which integrates the native rf.t samples."""
-    A = 2.0
-    T = 4.0e-3
-    rf = dummy_rf(amplitude=A, duration=T)
+    amplitude = 2.0
+    duration = 4.0e-3
+    rf = dummy_rf(amplitude=amplitude, duration=duration)
 
-    E, P, rms = pp.calc_rf_power(rf, dt=None)
+    energy, power, rms = pp.calc_rf_power(rf, dt=None)
 
-    assert np.isclose(E, A**2 * T)
-    assert np.isclose(P, A**2)
-    assert np.isclose(rms, A)
+    assert np.isclose(energy, amplitude**2 * duration)
+    assert np.isclose(power, amplitude**2)
+    assert np.isclose(rms, amplitude)
 
 
 def test_block_pulse_energy():
@@ -219,9 +219,9 @@ def test_dt_consistency():
 def test_sequence_window_with_delay_blocks(dummy_rf, dummy_sequence):
     """Sliding window must slide correctly past blocks without RF events."""
     seq = dummy_sequence
-    A = 2.0
-    T = 1.0e-3
-    rf = dummy_rf(amplitude=A, duration=T)
+    amplitude = 2.0
+    duration = 1.0e-3
+    rf = dummy_rf(amplitude=amplitude, duration=duration)
 
     seq.add_block(rf)
     seq.add_block(pp.make_delay(10e-3))
@@ -230,10 +230,10 @@ def test_sequence_window_with_delay_blocks(dummy_rf, dummy_sequence):
 
     # The largest window contains only the RF block:
     # energy = A**2 * T, averaged over the nominal window duration
-    assert np.isclose(energy, A**2 * T)
-    assert np.isclose(mean_pwr, A**2 * T / 5e-3)
-    assert np.isclose(rms, np.sqrt(A**2 * T / 5e-3))
-    assert np.isclose(peak, A**2)
+    assert np.isclose(energy, amplitude**2 * duration)
+    assert np.isclose(mean_pwr, amplitude**2 * duration / 5e-3)
+    assert np.isclose(rms, np.sqrt(amplitude**2 * duration / 5e-3))
+    assert np.isclose(peak, amplitude**2)
 
 
 def test_sequence_window_multiple_rf_and_delays(dummy_rf, dummy_sequence):
@@ -328,7 +328,7 @@ def test_invalid_window_duration(dummy_rf, dummy_sequence):
 
 
 def test_sequence_no_rf(dummy_sequence):
-    """A sequence without RF events has zero RF power."""
+    """amplitude sequence without RF events has zero RF power."""
     seq = dummy_sequence
     seq.add_block(pp.make_delay(1e-3))
 

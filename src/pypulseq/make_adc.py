@@ -2,7 +2,6 @@ import itertools
 import numbers
 from math import ceil, floor, gcd, isclose, prod
 from types import SimpleNamespace
-from typing import List, Tuple, Union
 from warnings import warn
 
 import numpy as np
@@ -18,10 +17,10 @@ def make_adc(
     dwell: float = 0.0,
     freq_offset: float = 0.0,
     phase_offset: float = 0.0,
-    system: Union[Opts, None] = None,
+    system: Opts | None = None,
     freq_ppm: float = 0.0,
     phase_ppm: float = 0.0,
-    phase_modulation: Union[np.ndarray, None] = None,
+    phase_modulation: np.ndarray | None = None,
 ) -> SimpleNamespace:
     """
     Create an ADC readout event.
@@ -117,8 +116,8 @@ def make_adc(
 
 
 def calc_adc_segments(
-    num_samples: int, dwell: float, system: Union[Opts, None] = None, mode: str = 'lengthen'
-) -> Tuple[int, int]:
+    num_samples: int, dwell: float, system: Opts | None = None, mode: str = 'lengthen'
+) -> tuple[int, int]:
     """Calculate splitting of the ADC in segments with equal samples.
 
     Parameters
@@ -225,7 +224,7 @@ def calc_adc_segments(
     return int(num_segments), int(num_samples_seg)
 
 
-def _prime_factors(n: int) -> List[int]:
+def _prime_factors(n: int) -> list[int]:
     """Compute the prime factors of given integer n."""
     if n == 1:
         return [1]

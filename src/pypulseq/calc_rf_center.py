@@ -1,10 +1,9 @@
 from types import SimpleNamespace
-from typing import Tuple
 
 import numpy as np
 
 
-def calc_rf_center(rf: SimpleNamespace) -> Tuple[float, float]:
+def calc_rf_center(rf: SimpleNamespace) -> tuple[float, float]:
     """
     Calculate the time point of the effective rotation calculated as the peak of the radio-frequency amplitude for the
     shaped pulses and the center of the pulse for the block pulses. Zero padding in the radio-frequency pulse is

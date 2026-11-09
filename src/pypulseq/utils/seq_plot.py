@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import itertools
 import math
+import numbers
 import typing
 from typing import Literal
 
@@ -83,7 +84,7 @@ class SeqPlot:
     def __init__(
         self,
         seq: Sequence,
-        label: str = str(),
+        label: str = '',
         show_blocks: bool = False,
         save: bool = False,
         time_range=(0, np.inf),
@@ -91,7 +92,7 @@ class SeqPlot:
         grad_disp: str = 'kHz/m',
         plot_now: bool = True,
         clear: bool = True,
-        overlay: 'SeqPlot' = None,
+        overlay: SeqPlot = None,
         stacked: bool = False,
         show_guides: bool = False,
         rf_plot: Literal['auto', 'abs', 'real', 'imag'] = 'auto',
@@ -355,7 +356,7 @@ def _seq_plot(
     valid_time_units = ['s', 'ms', 'us']
     valid_grad_units = ['kHz/m', 'mT/m']
     valid_labels = get_supported_labels()
-    if not all(isinstance(x, (int, float)) for x in time_range) or len(time_range) != 2:
+    if not all(isinstance(x, numbers.Real) for x in time_range) or len(time_range) != 2:
         raise ValueError('Invalid time range')
     if time_disp not in valid_time_units:
         raise ValueError('Unsupported time unit')

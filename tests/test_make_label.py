@@ -21,8 +21,9 @@ def test_inc_not_compatible_with_flags():
 
 
 def test_invalid_value():
-    with pytest.raises(ValueError, match='Must supply a valid numerical or logical value'):
-        make_label(label='SLC', type='SET', value='one')
+    for invalid in ['one', '2', None, np.array(2), 2 + 0j]:
+        with pytest.raises(ValueError, match='Must supply a valid numerical or logical value'):
+            make_label(label='SLC', type='SET', value=invalid)
 
     with pytest.raises(ValueError, match='Label value must be finite'):
         make_label(label='SLC', type='SET', value=np.nan)
@@ -46,4 +47,15 @@ def test_valid():
     # Values are converted to int
     label = make_label(label='SLC', type='SET', value=2.7)
     assert label.value == 2
+    assert isinstance(label.value, int)
+
+
+@pytest.mark.parametrize(
+    'value',
+    [np.int64(2), np.int32(2), np.uint8(2), np.float32(2.0), np.float64(2.0), np.bool_(True), True, 2, 2.0],
+)
+def test_numpy_scalar_and_builtin_values(value):
+    # Numpy scalars (and Python bool/int/float) are accepted and converted to int
+    label = make_label(label='PAR', type='SET', value=value)
+    assert label.value == int(value)
     assert isinstance(label.value, int)

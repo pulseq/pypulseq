@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from typing import List, Union
 
 import numpy as np
 
@@ -15,7 +14,7 @@ def __get_grad_abs_mag(grad: SimpleNamespace) -> np.ndarray:
     return np.max(np.abs(grad.waveform))
 
 
-def rotate(*args: SimpleNamespace, angle: float, axis: str, system: Union[Opts, None] = None) -> List[SimpleNamespace]:
+def rotate(*args: SimpleNamespace, angle: float, axis: str, system: Opts | None = None) -> list[SimpleNamespace]:
     """
     Rotates the corresponding gradient(s) about the given axis by the specified amount. Gradients parallel to the
     rotation axis and non-gradient(s) are not affected. Possible rotation axes are 'x', 'y' or 'z'.

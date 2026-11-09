@@ -111,8 +111,8 @@ def test_plot_rf_plot_auto_default():
     result_auto = seq2.plot(plot_now=False, rf_plot='auto')
 
     # Compare y-data of all lines in fig1 (RF/ADC) - should be identical
-    for ax1, ax2 in zip(result_default.fig1.get_axes(), result_auto.fig1.get_axes()):
-        for line1, line2 in zip(ax1.get_lines(), ax2.get_lines()):
+    for ax1, ax2 in zip(result_default.fig1.get_axes(), result_auto.fig1.get_axes(), strict=True):
+        for line1, line2 in zip(ax1.get_lines(), ax2.get_lines(), strict=True):
             np.testing.assert_array_equal(line1.get_ydata(), line2.get_ydata())
 
     plt.close('all')
@@ -131,5 +131,15 @@ def test_plot_rf_plot_with_overlay():
 
     # Should reuse figures from overlay
     assert id(sp2.fig1) == id(sp1.fig1)
+
+    plt.close('all')
+
+
+def test_plot_numpy_scalar_time_range():
+    """Test that numpy scalars are accepted in time_range."""
+    plt.close('all')
+    seq = create_test_sequence()
+
+    seq.plot(time_range=(np.int64(0), np.int64(1)), show_blocks=False, plot_now=False)
 
     plt.close('all')
