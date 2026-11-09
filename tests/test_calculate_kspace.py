@@ -77,7 +77,7 @@ def test_calculate_kspace_dict_output_contains_t_ktraj_and_matches_legacy():
     assert result['t_refocusing'] == t_refocusing
 
 
-def test_calculate_kspacePP_deprecated_passthrough_output_as_dict():
+def test_calculate_kspacePP_deprecated_passthrough_output_as_dict():  # noqa: N802
     seq = _make_simple_gre_sequence()
 
     with pytest.warns(DeprecationWarning):

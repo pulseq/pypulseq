@@ -1,5 +1,5 @@
 import logging
-from typing import Any, List, Tuple, Union
+from typing import Any
 
 import numpy as np
 
@@ -11,13 +11,10 @@ logger = logging.getLogger(__name__)
 
 def calculate_kspace(
     seq: pp.Sequence,
-    trajectory_delay: Union[float, List[float], np.ndarray] = 0.0,
-    gradient_offset: Union[float, List[float], np.ndarray] = 0.0,
+    trajectory_delay: float | list[float] | np.ndarray = 0.0,
+    gradient_offset: float | list[float] | np.ndarray = 0.0,
     output_as_dict: bool = False,
-) -> Union[
-    Tuple[np.ndarray, np.ndarray, List[float], List[float], np.ndarray],
-    dict,
-]:
+) -> dict | tuple[np.ndarray, np.ndarray, list[float], list[float], np.ndarray]:
     """
     Calculates the k-space trajectory of the entire pulse sequence.
 
@@ -59,11 +56,11 @@ def calculate_kspace(
 
     def _build_time_axis(
         time_candidates: np.ndarray,
-        t_excitation: List[float],
-        t_refocusing: List[float],
+        t_excitation: list[float],
+        t_refocusing: list[float],
         t_adc: np.ndarray,
         total_duration: float,
-    ) -> Tuple[np.ndarray, float, float]:
+    ) -> tuple[np.ndarray, float, float]:
         t_acc = 1e-10  # Temporal accuracy
         t_acc_inv = 1 / t_acc
 
@@ -88,7 +85,7 @@ def calculate_kspace(
         return t_ktraj, t_acc, t_acc_inv
 
     def _sample_gradient_moments(
-        grad_moments_pp: List[Union[Any, None]],
+        grad_moments_pp: list[Any | None],
         t_ktraj: np.ndarray,
         t_acc: float,
         t_acc_inv: float,
@@ -113,12 +110,12 @@ def calculate_kspace(
     def _apply_excitation_and_refocusing_resets(
         k_traj: np.ndarray,
         t_ktraj: np.ndarray,
-        t_excitation: List[float],
-        t_refocusing: List[float],
+        t_excitation: list[float],
+        t_refocusing: list[float],
         t_adc: np.ndarray,
         t_acc: float,
         t_acc_inv: float,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         # Find indices of excitation and refocusing events
         i_excitation = np.searchsorted(t_ktraj, t_acc * np.round(t_acc_inv * np.asarray(t_excitation)))
         i_refocusing = np.searchsorted(t_ktraj, t_acc * np.round(t_acc_inv * np.asarray(t_refocusing)))
