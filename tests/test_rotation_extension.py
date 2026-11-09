@@ -15,7 +15,7 @@ from scipy.spatial.transform import Rotation
 
 def rot_mat_from_quat(q):
     """Rotation matrix of a scalar-first quaternion [w, x, y, z]."""
-    return Rotation.from_quat(np.asarray(q)[[1, 2, 3, 0]]).as_matrix()
+    return Rotation.from_quat(np.asarray(q), scalar_first=True).as_matrix()
 
 
 # ----------------------------------------------------------------------

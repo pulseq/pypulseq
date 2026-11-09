@@ -7,28 +7,6 @@ from scipy.spatial.transform import Rotation
 from pypulseq.utils.tracing import trace, trace_enabled
 
 
-def _quat_multiply(q1: np.ndarray, q2: np.ndarray) -> np.ndarray:
-    """Hamilton product q1 * q2 of quaternions in scalar-first format [w, x, y, z]."""
-    w1, x1, y1, z1 = q1
-    w2, x2, y2, z2 = q2
-    return np.array(
-        [
-            w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
-            w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
-            w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
-            w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,
-        ]
-    )
-
-
-def _scalar_first_quat(rotation: Rotation) -> np.ndarray:
-    """Unit quaternion [w, x, y, z] of a scipy rotation in canonical form (w >= 0), see `Rotation.as_quat`."""
-    q_xyzw = rotation.as_quat()  # canonical=True requires scipy >= 1.11
-    if q_xyzw[3] < 0:
-        q_xyzw = -q_xyzw
-    return q_xyzw[[3, 0, 1, 2]]
-
-
 def make_rotation(
     *,
     phi: float | None = None,
@@ -68,7 +46,9 @@ def make_rotation(
     Returns
     -------
     rot : SimpleNamespace
-        Rotation extension event with `type == 'rot3D'` and `rot_quaternion` a unit quaternion [w, x, y, z].
+        Rotation extension event with `type == 'rot3D'` and `rot_quaternion` a unit quaternion [w, x, y, z]. For
+        `rot_matrix` and `rotation` inputs the sign is chosen such that w >= 0; the other forms keep the sign as
+        computed from the given angles / quaternion.
 
     Raises
     ------
@@ -100,7 +80,8 @@ def make_rotation(
             'rot_matrix or rotation).'
         )
 
-    rot = SimpleNamespace(type='rot3D')
+    # Neither a rotation matrix nor a scipy Rotation prescribe the quaternion sign; use w >= 0 for these inputs
+    enforce_positive_w = rot_matrix is not None or rotation is not None
 
     if phi is not None or theta is not None:
         if phi is None:
@@ -112,9 +93,7 @@ def make_rotation(
         if not -np.pi <= theta <= np.pi:
             raise ValueError(f'Rotation angle theta ({theta:.2f}) is invalid. Must be within [-pi, pi] radians.')
 
-        qz = np.array([np.cos(phi / 2), 0.0, 0.0, np.sin(phi / 2)])
-        qy = np.array([np.cos(theta / 2), 0.0, np.sin(theta / 2), 0.0])
-        rot.rot_quaternion = _quat_multiply(qz, qy)
+        rotation = Rotation.from_euler('z', phi) * Rotation.from_euler('y', theta)
 
     elif axis is not None or angle is not None:
         if axis is None or angle is None:
@@ -129,7 +108,7 @@ def make_rotation(
         if not np.isfinite(angle) or not -np.pi <= angle <= np.pi:
             raise ValueError(f'Rotation angle ({angle:.2f}) is invalid. Must be within [-pi, pi] radians.')
 
-        rot.rot_quaternion = np.array([np.cos(angle / 2), *(np.sin(angle / 2) * axis / norm)])
+        rotation = Rotation.from_rotvec(angle * axis / norm)
 
     elif quaternion is not None:
         q = np.asarray(quaternion, dtype=float).ravel()
@@ -140,7 +119,7 @@ def make_rotation(
         norm = np.linalg.norm(q)
         if norm == 0:
             raise ValueError('Rotation quaternion norm must be non-zero.')
-        rot.rot_quaternion = q / norm
+        rotation = Rotation.from_quat(q, scalar_first=True)
 
     elif rot_matrix is not None:
         rot_mat = np.asarray(rot_matrix, dtype=float)
@@ -152,12 +131,16 @@ def make_rotation(
             raise ValueError('Rotation matrix is not orthogonal.')
         if not np.isclose(np.linalg.det(rot_mat), 1.0, atol=1e-6):
             raise ValueError('Rotation matrix determinant is not +1 (improper rotation).')
-        rot.rot_quaternion = _scalar_first_quat(Rotation.from_matrix(rot_mat))
+        rotation = Rotation.from_matrix(rot_mat)
 
     else:
         if not isinstance(rotation, Rotation) or not rotation.single:
             raise ValueError('Parameter rotation must be a single scipy.spatial.transform.Rotation object.')
-        rot.rot_quaternion = _scalar_first_quat(rotation)
+
+    rot = SimpleNamespace(type='rot3D')
+    rot.rot_quaternion = rotation.as_quat(scalar_first=True)
+    if enforce_positive_w and rot.rot_quaternion[0] < 0:
+        rot.rot_quaternion = -rot.rot_quaternion
 
     if trace_enabled():
         rot.trace = trace()

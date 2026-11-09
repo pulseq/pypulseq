@@ -51,7 +51,7 @@ def ext_grad_check(self: Sequence, block_index: int, check_g: dict, duration: fl
         rot_mat = np.eye(3)
     else:
         q = np.asarray(rot_quaternion, dtype=float)
-        rot_mat = Rotation.from_quat(q[[1, 2, 3, 0]]).as_matrix()
+        rot_mat = Rotation.from_quat(q, scalar_first=True).as_matrix()
 
     # Checks on the gradients of this block alone
     for ax in range(3):
@@ -145,7 +145,7 @@ def _boundary_grad_vals(self: Sequence, block_id: int | None, last: bool) -> np.
         # Apply the rotation of that block (if any) to obtain the physical-frame boundary values
         rot_quaternion = _block_rotation_quaternion(self, block_id)
         if rot_quaternion is not None:
-            vals = Rotation.from_quat(rot_quaternion[[1, 2, 3, 0]]).as_matrix() @ vals
+            vals = Rotation.from_quat(rot_quaternion, scalar_first=True).as_matrix() @ vals
     return vals
 
 
