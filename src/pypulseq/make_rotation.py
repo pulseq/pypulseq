@@ -7,33 +7,6 @@ from scipy.spatial.transform import Rotation
 from pypulseq.utils.tracing import trace, trace_enabled
 
 
-def _canonical_quat(q: np.ndarray) -> np.ndarray:
-    """
-    Return the quaternion with canonical sign (first non-zero component > 0).
-
-    q and -q describe the same rotation. Choosing a fixed sign ensures that equivalent inputs (e.g. phi and
-    phi - 2*pi, or a quaternion and its negative) yield identical rotation events, library entries and .seq files.
-    Near-zero components are snapped to 0 first (e.g. cos(pi/2) ~ 6e-17), so that e.g. phi = pi and phi = -pi
-    yield the same sign.
-
-    Parameters
-    ----------
-    q : np.ndarray
-        Unit quaternion [w, x, y, z].
-
-    Returns
-    -------
-    np.ndarray
-        Copy of `q` with canonical sign and without -0.0 components.
-    """
-    q = q.copy()
-    q[np.abs(q) < 1e-12] = 0.0
-    if q[np.flatnonzero(q)[0]] < 0:
-        q = -q
-        q += 0.0  # normalize -0.0 introduced by the negation to 0.0
-    return q
-
-
 def make_rotation(
     *,
     phi: float | None = None,
@@ -73,8 +46,9 @@ def make_rotation(
     Returns
     -------
     rot : SimpleNamespace
-        Rotation extension event with `type == 'rot3D'` and `rot_quaternion` a unit quaternion [w, x, y, z] in
-        canonical form (w >= 0), i.e. inputs describing the same rotation yield the same quaternion.
+        Rotation extension event with `type == 'rot3D'` and `rot_quaternion` a unit quaternion [w, x, y, z]. For
+        `rot_matrix` and `rotation` inputs the sign is chosen such that w >= 0; the other forms keep the sign as
+        computed from the given angles / quaternion.
 
     Raises
     ------
@@ -105,6 +79,9 @@ def make_rotation(
             'make_rotation requires exactly one rotation input (phi/theta, axis/angle, quaternion, '
             'rot_matrix or rotation).'
         )
+
+    # Neither a rotation matrix nor a scipy Rotation prescribe the quaternion sign; use w >= 0 for these inputs
+    enforce_positive_w = rot_matrix is not None or rotation is not None
 
     if phi is not None or theta is not None:
         if phi is None:
@@ -161,7 +138,9 @@ def make_rotation(
             raise ValueError('Parameter rotation must be a single scipy.spatial.transform.Rotation object.')
 
     rot = SimpleNamespace(type='rot3D')
-    rot.rot_quaternion = _canonical_quat(rotation.as_quat(scalar_first=True))
+    rot.rot_quaternion = rotation.as_quat(scalar_first=True)
+    if enforce_positive_w and rot.rot_quaternion[0] < 0:
+        rot.rot_quaternion = -rot.rot_quaternion
 
     if trace_enabled():
         rot.trace = trace()
