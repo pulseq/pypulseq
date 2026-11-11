@@ -14,7 +14,7 @@
 
 # PyPulseq: A Python Package for MRI Pulse Sequence Design
 
-## PyPulseq (v1.5.0) is compatible with all Pulseq interpreter sequences with version >= 1.5.0. The new features introduced with Pulseq 1.5.1 are not yet supported, but will be added in the near future. 
+## PyPulseq (v1.5.0.post2) is compatible with all Pulseq interpreter sequences with version >= 1.5.0. The new features introduced with Pulseq 1.5.1 are not yet fully supported, but will be added in the near future with release 1.5.1.
 
 ## Table of contents 🧾
 
