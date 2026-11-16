@@ -29,8 +29,8 @@ def _rotation_to_matrix(rotation: np.ndarray | list | tuple | float | Rotation) 
 
     values = rotation.ravel()
     if values.size == 4:
-        # Unit quaternion with the scalar component first [w, x, y, z]; scipy expects [x, y, z, w]
-        return Rotation.from_quat(values[[1, 2, 3, 0]]).as_matrix()
+        # Unit quaternion with the scalar component first [w, x, y, z]
+        return Rotation.from_quat(values, scalar_first=True).as_matrix()
 
     if values.size in (1, 2):
         phi = values[0]
