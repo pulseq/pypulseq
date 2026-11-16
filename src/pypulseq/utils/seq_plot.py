@@ -14,6 +14,7 @@ from matplotlib import pyplot as plt
 from pypulseq import eps
 from pypulseq.calc_rf_center import calc_rf_center
 from pypulseq.Sequence import parula
+from pypulseq.Sequence.block import get_block_gradients
 from pypulseq.supported_labels_rf_use import get_supported_labels
 from pypulseq.utils.cumsum import cumsum
 
@@ -648,10 +649,10 @@ def _seq_plot(
                         'xb',
                     )
 
-            grad_channels = ['gx', 'gy', 'gz']
-            for x in range(len(grad_channels)):  # Gradients
-                if getattr(block, grad_channels[x], None) is not None:
-                    grad = getattr(block, grad_channels[x])
+            grads = get_block_gradients(block, seq.system)  # Gradients in the physical (rotated) frame
+            for x in range(3):  # Gradients
+                if grads[x] is not None:
+                    grad = grads[x]
                     if grad.type == 'grad':
                         # We extend the shape by adding the first and the last points in an effort of making the
                         # display a bit less confusing...

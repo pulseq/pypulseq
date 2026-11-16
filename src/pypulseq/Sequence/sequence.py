@@ -25,6 +25,7 @@ from pypulseq.decompress_shape import decompress_shape
 from pypulseq.event_lib import EventLibrary
 from pypulseq.opts import Opts
 from pypulseq.Sequence import block
+from pypulseq.Sequence.block import get_block_gradients
 from pypulseq.Sequence.calc_grad_spectrum import calculate_gradient_spectrum
 from pypulseq.Sequence.calc_pns import calc_pns
 from pypulseq.Sequence.ext_test_report import ext_test_report, ext_test_report_data
@@ -70,6 +71,7 @@ class Sequence:
         self.shape_library = EventLibrary(numpy_data=True)
         self.trigger_library = EventLibrary()
         self.soft_delay_library = EventLibrary()
+        self.rotation_library = EventLibrary()
 
         # =========
         # OTHER
@@ -1329,6 +1331,9 @@ class Sequence:
     def register_rf_event(self, event: SimpleNamespace) -> tuple[int, list[int]]:
         return block.register_rf_event(self, event)
 
+    def register_rotation_event(self, event: SimpleNamespace) -> int:
+        return block.register_rotation_event(self, event)
+
     def register_soft_delay_event(self, event: SimpleNamespace) -> int:
         return block.register_soft_delay_event(self, event)
 
@@ -1807,9 +1812,10 @@ class Sequence:
 
         for block_counter in blocks:
             block = self.get_block(block_counter)
+            grads = get_block_gradients(block, self.system)
 
             for j in range(len(grad_channels)):
-                grad = getattr(block, grad_channels[j])
+                grad = grads[j]
                 if grad is not None:  # Gradients
                     if grad.type == 'grad':
                         # Check if we have an extended trapezoid or an arbitrary gradient on a regular raster
@@ -2004,6 +2010,12 @@ class Sequence:
 
         # Calculate sequence duration and stored it in the TotalDuration definition
         self.set_definition('TotalDuration', sum(self.block_durations.values()))
+
+        # Mark the ROTATIONS extension as required so readers without support for it fail
+        if len(self.rotation_library.data) != 0:
+            required_extensions = self.get_definition('RequiredExtensions')
+            if 'ROTATIONS' not in required_extensions.split():
+                self.set_definition('RequiredExtensions', (required_extensions.strip() + ' ROTATIONS').strip())
 
         # Check whether all gradients in the last block are ramped down properly
         last_block_id = next(reversed(self.block_events))
