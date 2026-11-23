@@ -1,5 +1,3 @@
-from typing import Union
-
 from pypulseq.convert import convert
 
 
@@ -13,33 +11,33 @@ class Opts:
     Attributes
     ----------
     adc_dead_time : float, default=0
-        Dead time for ADC readout pulses.
+        Dead time (s) for ADC readout pulses.
     adc_raster_time : float, default=100e-9
-        Raster time for ADC readout pulses.
+        Raster time (s) for ADC readout pulses.
     block_duration_raster : float, default=10e-6
-        Raster time for block durations.
+        Raster time (s) for block durations.
     gamma : float, default=42.576e6
-        Gyromagnetic ratio. Default gamma is specified for Hydrogen.
+        Gyromagnetic ratio (Hz/T). Default gamma is specified for Hydrogen.
     grad_raster_time : float, default=10e-6
-        Raster time for gradient waveforms.
+        Raster time (s) for gradient waveforms.
     grad_unit : str, default='Hz/m'
         Unit of maximum gradient amplitude. Must be one of 'Hz/m', 'mT/m' or 'rad/ms/mm'.
     max_grad : float, default=40 mT/m
-        Maximum gradient amplitude.
+        Maximum gradient amplitude (converted from grad_unit to Hz/m).
     max_slew : float, default=170 T/m/s
-        Maximum slew rate.
+        Maximum slew rate (converted from slew_unit to Hz/m/s).
     rf_dead_time : float, default=0
-        Dead time for radio-frequency pulses.
+        Dead time (s) for radio-frequency pulses.
     rf_raster_time : float, default=1e-6
-        Raster time for radio-frequency pulses.
+        Raster time (s) for radio-frequency pulses.
     rf_ringdown_time : float, default=0
-        Ringdown time for radio-frequency pulses.
+        Ringdown time (s) for radio-frequency pulses.
     adc_samples_limit : int, default=0
         Maximum number of samples for a single ADC object. If 0, no limit is set.
     adc_samples_divisor : int, default=4
         Samples of ADC must be divisible by 'adc_samples_divisor'.
     rise_time : float, default=0
-        Rise time for gradients.
+        Rise time (s) for gradients.
     slew_unit : str, default='Hz/m/s'
         Unit of maximum slew rate. Must be one of 'Hz/m/s', 'mT/m/ms', 'T/m/s' or 'rad/ms/mm/ms'.
     B0 : float, default=1.5
@@ -54,22 +52,22 @@ class Opts:
 
     def __init__(
         self,
-        adc_dead_time: Union[float, None] = None,
-        adc_raster_time: Union[float, None] = None,
-        block_duration_raster: Union[float, None] = None,
-        gamma: Union[float, None] = None,
-        grad_raster_time: Union[float, None] = None,
+        adc_dead_time: float | None = None,
+        adc_raster_time: float | None = None,
+        block_duration_raster: float | None = None,
+        gamma: float | None = None,
+        grad_raster_time: float | None = None,
         grad_unit: str = 'Hz/m',
-        max_grad: Union[float, None] = None,
-        max_slew: Union[float, None] = None,
-        rf_dead_time: Union[float, None] = None,
-        rf_raster_time: Union[float, None] = None,
-        rf_ringdown_time: Union[float, None] = None,
-        adc_samples_limit: Union[int, None] = None,
-        adc_samples_divisor: Union[int, None] = None,
-        rise_time: Union[float, None] = None,
+        max_grad: float | None = None,
+        max_slew: float | None = None,
+        rf_dead_time: float | None = None,
+        rf_raster_time: float | None = None,
+        rf_ringdown_time: float | None = None,
+        adc_samples_limit: int | None = None,
+        adc_samples_divisor: int | None = None,
+        rise_time: float | None = None,
         slew_unit: str = 'Hz/m/s',
-        B0: Union[float, None] = None,
+        B0: float | None = None,  # noqa: N803
     ):
         valid_grad_units = ['Hz/m', 'mT/m', 'rad/ms/mm']
         valid_slew_units = ['Hz/m/s', 'mT/m/ms', 'T/m/s', 'rad/ms/mm/ms']
@@ -121,7 +119,7 @@ class Opts:
         if adc_samples_divisor is None:
             adc_samples_divisor = Opts.default.adc_samples_divisor
         if B0 is None:
-            B0 = Opts.default.B0
+            B0 = Opts.default.B0  # noqa: N806
 
         self.max_grad = max_grad
         self.max_slew = max_slew

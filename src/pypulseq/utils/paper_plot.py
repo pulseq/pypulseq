@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,14 +8,14 @@ from pypulseq import eps
 
 def paper_plot(
     seq,
-    time_range: Tuple[float] = (0, np.inf),
+    time_range: tuple[float] = (0, np.inf),
     line_width: float = 1.2,
-    axes_color: Tuple[float] = (0.5, 0.5, 0.5),
+    axes_color: tuple[float] = (0.5, 0.5, 0.5),
     rf_color: str = 'black',
     gx_color: str = 'blue',
     gy_color: str = 'red',
-    gz_color: Tuple[float] = (0, 0.5, 0.3),
-    rf_plot: str = 'abs',
+    gz_color: tuple[float] = (0, 0.5, 0.3),
+    rf_plot: Literal['abs', 'real', 'imag'] = 'abs',
 ):
     """
     Plot sequence using paper-style formatting (minimalist, high-contrast layout).
@@ -40,7 +40,9 @@ def paper_plot(
     gz_color : color, default=(0, 0.5, 0.3)
         Color for gradient Z waveform.
     rf_plot : {'abs', 'real', 'imag'}, default='abs'
-        Determines how to plot RF waveforms (magnitude, real or imaginary part).
+        Determines how to plot the RF waveforms.
+        If 'abs', plots magnitude for all RF events.
+        If 'real' or 'imag', plots the respective component for all RF events.
 
     """
     # Get waveform data

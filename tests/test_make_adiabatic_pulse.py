@@ -42,9 +42,55 @@ def test_option_requirements():
     with pytest.raises(ValueError, match='Slice thickness must be provided'):
         make_adiabatic_pulse(pulse_type='hypsec', return_gz=True)
 
+    with pytest.raises(ValueError, match='Slice thickness must be provided'):
+        make_adiabatic_pulse(pulse_type='hypsec', return_gz=True, slice_thickness=np.nan)
+
     _, gz, gzr = make_adiabatic_pulse(pulse_type='hypsec', return_gz=True, slice_thickness=1)
     assert gz.type == 'trap'
     assert gzr.type == 'trap'
+
+
+def test_invalid_duration():
+    for invalid in [0, -1e-3, np.nan, np.inf]:
+        with pytest.raises(ValueError, match='RF pulse duration must be positive'):
+            make_adiabatic_pulse(pulse_type='hypsec', duration=invalid)
+
+
+def test_negative_delay():
+    with pytest.raises(ValueError, match='Delay must be non-negative'):
+        make_adiabatic_pulse(pulse_type='hypsec', delay=-1e-3)
+
+
+def test_invalid_dwell():
+    for invalid in [0, -1e-6, np.nan]:
+        with pytest.raises(ValueError, match='Dwell must be positive'):
+            make_adiabatic_pulse(pulse_type='hypsec', dwell=invalid)
+
+
+def test_invalid_adiabaticity():
+    for invalid in [0, np.nan]:
+        with pytest.raises(ValueError, match='adiabaticity must be positive'):
+            make_adiabatic_pulse(pulse_type='hypsec', adiabaticity=invalid)
+
+
+def test_invalid_hypsec_parameters():
+    for invalid in [-800, np.nan]:
+        with pytest.raises(ValueError, match='beta must be positive'):
+            make_adiabatic_pulse(pulse_type='hypsec', beta=invalid)
+
+    for invalid in [0, np.nan]:
+        with pytest.raises(ValueError, match='mu must be positive'):
+            make_adiabatic_pulse(pulse_type='hypsec', mu=invalid)
+
+
+def test_invalid_wurst_parameters():
+    for invalid in [-40000, np.nan]:
+        with pytest.raises(ValueError, match='bandwidth must be positive'):
+            make_adiabatic_pulse(pulse_type='wurst', bandwidth=invalid)
+
+    for invalid in [0, np.nan]:
+        with pytest.raises(ValueError, match='n_fac must be positive'):
+            make_adiabatic_pulse(pulse_type='wurst', n_fac=invalid)
 
 
 # My intention was to test that the rephase gradient area is appropriate,

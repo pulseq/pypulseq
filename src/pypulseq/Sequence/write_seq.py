@@ -1,6 +1,6 @@
 import hashlib
+import numbers
 from pathlib import Path
-from typing import Union
 from warnings import warn
 
 import numpy as np
@@ -11,7 +11,7 @@ from pypulseq.supported_labels_rf_use import get_supported_labels, get_supported
 version_major, version_minor, version_revision = __version__.split('.')[:3]
 
 
-def write(self, file_name: Union[str, Path], create_signature, remove_duplicates=True) -> Union[str, None]:
+def write(self, file_name: str | Path, create_signature, remove_duplicates=True) -> str | None:
     """
     Write the sequence data to the given filename using the open file format for MR sequences.
 
@@ -49,7 +49,7 @@ def write(self, file_name: Union[str, Path], create_signature, remove_duplicates
     if remove_duplicates:
         self = self.remove_duplicates()
 
-    with open(file_name, 'w') as output_file:
+    with open(file_name, 'w', newline='\n') as output_file:
         output_file.write('# Pulseq sequence file\n')
         output_file.write('# Created by PyPulseq\n\n')
 
@@ -67,11 +67,11 @@ def write(self, file_name: Union[str, Path], create_signature, remove_duplicates
                 output_file.write(f'{keys[block_counter]} ')
                 if isinstance(values[block_counter], str):
                     output_file.write(values[block_counter] + ' ')
-                elif isinstance(values[block_counter], (int, float)):
+                elif isinstance(values[block_counter], numbers.Real):
                     output_file.write(f'{values[block_counter]:0.9g} ')
                 elif isinstance(values[block_counter], (list, tuple, np.ndarray)):  # e.g. [FOV_x, FOV_y, FOV_z]
                     for i in range(len(values[block_counter])):
-                        if isinstance(values[block_counter][i], (int, float)):
+                        if isinstance(values[block_counter][i], numbers.Real):
                             output_file.write(f'{values[block_counter][i]:0.9g} ')
                         else:
                             output_file.write(f'{values[block_counter][i]} ')
@@ -108,7 +108,7 @@ def write(self, file_name: Union[str, Path], create_signature, remove_duplicates
             output_file.write(f'# Field "use" is the initial of: {" ".join(get_supported_rf_uses()).strip()}\n')
             output_file.write('[RF]\n')
             id_format_str = (
-                '{:.0f} {:12g} {:.0f} {:.0f} {:.0f} {:g} {:g} {:g} {:g} {:g} {:g} {:s}\n'  # Refer lines 20-21
+                '{:.0f} {:12g} {:.0f} {:.0f} {:.0f} {:g} {:.0f} {:g} {:g} {:g} {:g} {:s}\n'  # Refer lines 20-21
             )
             for k in self.rf_library.data:
                 lib_data1 = self.rf_library.data[k][0:4]
@@ -245,9 +245,9 @@ def write(self, file_name: Union[str, Path], create_signature, remove_duplicates
             output_file.write('[SHAPES]\n\n')
             for k in self.shape_library.data:
                 shape_data = self.shape_library.data[k]
-                s = 'shape_id {:.0f}\n'.format(k)
+                s = f'shape_id {k:.0f}\n'
                 output_file.write(s)
-                s = 'num_samples {:.0f}\n'.format(shape_data[0])
+                s = f'num_samples {shape_data[0]:.0f}\n'
                 output_file.write(s)
                 s = ('{:.9g}\n' * len(shape_data[1:])).format(*shape_data[1:])
                 output_file.write(s)
@@ -255,13 +255,13 @@ def write(self, file_name: Union[str, Path], create_signature, remove_duplicates
 
     if create_signature:  # Sign the file
         # Calculate digest
-        with open(file_name, 'r') as output_file:
+        with open(file_name, 'rb') as output_file:
             buffer = output_file.read()
 
-            md5 = hashlib.md5(buffer.encode('utf-8')).hexdigest()
+            md5 = hashlib.md5(buffer).hexdigest()
 
         # Write signature
-        with open(file_name, 'a') as output_file:
+        with open(file_name, 'a', newline='\n') as output_file:
             output_file.write('\n[SIGNATURE]\n')
             output_file.write(
                 '# This is the hash of the Pulseq file, calculated right before the [SIGNATURE] section was added\n'
@@ -279,7 +279,7 @@ def write(self, file_name: Union[str, Path], create_signature, remove_duplicates
         return md5
 
 
-def write_v141(self, file_name: Union[str, Path], create_signature, remove_duplicates=True) -> Union[str, None]:
+def write_v141(self, file_name: str | Path, create_signature, remove_duplicates=True) -> str | None:
     """
     Write the sequence data to the given filename using the open file format for MR sequences.
 
@@ -317,7 +317,7 @@ def write_v141(self, file_name: Union[str, Path], create_signature, remove_dupli
     if remove_duplicates:
         self = self.remove_duplicates()
 
-    with open(file_name, 'w') as output_file:
+    with open(file_name, 'w', newline='\n') as output_file:
         output_file.write('# Pulseq sequence file\n')
         output_file.write('# Created by PyPulseq\n\n')
 
@@ -337,11 +337,11 @@ def write_v141(self, file_name: Union[str, Path], create_signature, remove_dupli
                 output_file.write(f'{keys[block_counter]} ')
                 if isinstance(values[block_counter], str):
                     output_file.write(values[block_counter] + ' ')
-                elif isinstance(values[block_counter], (int, float)):
+                elif isinstance(values[block_counter], numbers.Real):
                     output_file.write(f'{values[block_counter]:0.9g} ')
                 elif isinstance(values[block_counter], (list, tuple, np.ndarray)):  # e.g. [FOV_x, FOV_y, FOV_z]
                     for i in range(len(values[block_counter])):
-                        if isinstance(values[block_counter][i], (int, float)):
+                        if isinstance(values[block_counter][i], numbers.Real):
                             output_file.write(f'{values[block_counter][i]:0.9g} ')
                         else:
                             output_file.write(f'{values[block_counter][i]} ')
@@ -376,11 +376,11 @@ def write_v141(self, file_name: Union[str, Path], create_signature, remove_dupli
             output_file.write('# id amplitude mag_id phase_id time_shape_id delay freq phase\n')
             output_file.write('# ..        Hz   ....     ....          ....    us   Hz   rad\n')
             output_file.write('[RF]\n')
-            id_format_str = '{:.0f} {:12g} {:.0f} {:.0f} {:.0f} {:g} {:g} {:g}\n'  # Refer lines 20-21
+            id_format_str = '{:.0f} {:12g} {:.0f} {:.0f} {:.0f} {:.0f} {:g} {:g}\n'  # Refer lines 20-21
             for k in self.rf_library.data:
                 lib = self.rf_library.data[k]
                 data1 = lib[0:4]
-                data2 = tuple(a + b * ppm_to_hz for a, b in zip(lib[8:10], lib[6:8]))
+                data2 = tuple(a + b * ppm_to_hz for a, b in zip(lib[8:10], lib[6:8], strict=True))
                 delay = round(lib[5] / self.rf_raster_time) * self.rf_raster_time * 1e6
                 s = id_format_str.format(k, *data1, delay, *data2)
                 output_file.write(s)
@@ -438,7 +438,7 @@ def write_v141(self, file_name: Union[str, Path], create_signature, remove_dupli
             for k in self.adc_library.data:
                 lib = self.adc_library.data[k]
                 data1 = (lib[0], lib[1] * 1e9, lib[2] * 1e6)
-                data2 = tuple(a + b * ppm_to_hz for a, b in zip(lib[5:7], lib[3:5]))
+                data2 = tuple(a + b * ppm_to_hz for a, b in zip(lib[5:7], lib[3:5], strict=True))
                 s = id_format_str.format(k, *data1, *data2)
                 output_file.write(s)
             output_file.write('\n')
@@ -505,9 +505,9 @@ def write_v141(self, file_name: Union[str, Path], create_signature, remove_dupli
             output_file.write('[SHAPES]\n\n')
             for k in self.shape_library.data:
                 shape_data = self.shape_library.data[k]
-                s = 'shape_id {:.0f}\n'.format(k)
+                s = f'shape_id {k:.0f}\n'
                 output_file.write(s)
-                s = 'num_samples {:.0f}\n'.format(shape_data[0])
+                s = f'num_samples {shape_data[0]:.0f}\n'
                 output_file.write(s)
                 s = ('{:.9g}\n' * len(shape_data[1:])).format(*shape_data[1:])
                 output_file.write(s)
@@ -515,13 +515,13 @@ def write_v141(self, file_name: Union[str, Path], create_signature, remove_dupli
 
     if create_signature:  # Sign the file
         # Calculate digest
-        with open(file_name, 'r') as output_file:
+        with open(file_name, 'rb') as output_file:
             buffer = output_file.read()
 
-            md5 = hashlib.md5(buffer.encode('utf-8')).hexdigest()
+            md5 = hashlib.md5(buffer).hexdigest()
 
         # Write signature
-        with open(file_name, 'a') as output_file:
+        with open(file_name, 'a', newline='\n') as output_file:
             output_file.write('\n[SIGNATURE]\n')
             output_file.write(
                 '# This is the hash of the Pulseq file, calculated right before the [SIGNATURE] section was added\n'

@@ -1,6 +1,5 @@
 from copy import deepcopy
 from types import SimpleNamespace
-from typing import Tuple, Union
 
 import numpy as np
 
@@ -10,8 +9,8 @@ from pypulseq.utils.tracing import trace, trace_enabled
 
 
 def split_gradient_at(
-    grad: SimpleNamespace, time_point: float, system: Union[Opts, None] = None
-) -> Union[SimpleNamespace, Tuple[SimpleNamespace, SimpleNamespace]]:
+    grad: SimpleNamespace, time_point: float, system: Opts | None = None
+) -> SimpleNamespace | tuple[SimpleNamespace, SimpleNamespace]:
     """
     Splits a trapezoidal gradient into two extended trapezoids defined by the cut line. Returns the two gradient parts
     by cutting the original 'grad' at 'time_point'. For the input type 'trapezoid' the results are returned as extended
@@ -31,7 +30,7 @@ def split_gradient_at(
     grad : SimpleNamespace
         Gradient event to be split into two gradient events.
     time_point : float
-        Time point at which `grad` will be split into two gradient waveforms.
+        Time point in seconds (s) at which `grad` will be split into two gradient waveforms.
     system : Opts, default=Opts()
         System limits.
 
@@ -55,7 +54,7 @@ def split_gradient_at(
 
     time_index = round(time_point / grad_raster_time)
     # Work around floating-point arithmetic limitation
-    time_point = round(time_index * grad_raster_time, 6)
+    time_point = round(time_index * grad_raster_time, 7)
     channel = grad.channel
 
     if grad.type == 'grad':
@@ -122,7 +121,7 @@ def split_gradient_at(
         time_point -= grad.delay
 
     amplitudes = np.array(amplitudes)
-    times = np.array(times).round(6)  # Work around floating-point arithmetic limitation
+    times = np.array(times).round(7)  # Work around floating-point arithmetic limitation
 
     # Sample at time point
     amp_tp = np.interp(x=time_point, xp=times, fp=amplitudes)

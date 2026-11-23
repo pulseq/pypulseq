@@ -1,8 +1,7 @@
 from types import SimpleNamespace
-from typing import Tuple
 
 
-def block_to_events(*args: SimpleNamespace | float) -> Tuple[SimpleNamespace, ...]:
+def block_to_events(*args: SimpleNamespace | float) -> tuple[SimpleNamespace, ...]:
     """
     Converts `args` from a block to a list of events. If `args` is already a list of event(s), returns it unmodified.
 

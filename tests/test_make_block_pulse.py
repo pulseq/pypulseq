@@ -1,13 +1,9 @@
-"""Tests for the make_block_pulse.py module
-
-Will Clarke, University of Oxford, 2023
-"""
-
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
 from pypulseq import make_block_pulse
+from pypulseq.opts import Opts
 
 
 def test_invalid_use_error():
@@ -21,11 +17,22 @@ def test_bandwidth_and_duration_error():
 
 
 def test_invalid_bandwidth_and_duration_error():
-    with pytest.raises(ValueError, match=r'One of bandwidth or duration must be defined and be > 0.'):
+    with pytest.raises(ValueError, match=r'Duration must be positive.'):
         make_block_pulse(flip_angle=np.pi, duration=-1e-3)
 
-    with pytest.raises(ValueError, match=r'One of bandwidth or duration must be defined and be > 0.'):
+    with pytest.raises(ValueError, match=r'Duration must be positive.'):
+        make_block_pulse(flip_angle=np.pi, duration=0)
+
+    with pytest.raises(ValueError, match=r'Bandwidth must be positive.'):
         make_block_pulse(flip_angle=np.pi, bandwidth=-1e3)
+
+    with pytest.raises(ValueError, match=r'time_bw_product must be positive.'):
+        make_block_pulse(flip_angle=np.pi, bandwidth=1e3, time_bw_product=-5)
+
+
+def test_negative_delay_error():
+    with pytest.raises(ValueError, match=r'Delay must be non-negative.'):
+        make_block_pulse(flip_angle=np.pi, duration=1e-3, delay=-1e-6)
 
 
 def test_default_duration_warning():
@@ -71,3 +78,20 @@ def test_amp_calculation():
 
     pulse = make_block_pulse(duration=2e-3, flip_angle=np.pi / 2)
     assert np.isclose(pulse.signal.max(), 125)
+
+
+def test_dead_time_warning():
+    system = Opts(
+        rf_dead_time=100e-6,
+        rf_ringdown_time=0,
+    )
+
+    with pytest.warns(UserWarning, match=r'Specified RF delay .* is less than'):
+        rf = make_block_pulse(
+            flip_angle=np.pi,
+            duration=1e-3,
+            delay=0,
+            system=system,
+        )
+
+    assert rf.delay == system.rf_dead_time

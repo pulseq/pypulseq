@@ -1,7 +1,7 @@
 import itertools
+import numbers
 from math import ceil, floor, gcd, isclose, prod
 from types import SimpleNamespace
-from typing import List, Tuple, Union
 from warnings import warn
 
 import numpy as np
@@ -17,34 +17,34 @@ def make_adc(
     dwell: float = 0.0,
     freq_offset: float = 0.0,
     phase_offset: float = 0.0,
-    system: Union[Opts, None] = None,
+    system: Opts | None = None,
     freq_ppm: float = 0.0,
     phase_ppm: float = 0.0,
-    phase_modulation: Union[np.ndarray, None] = None,
+    phase_modulation: np.ndarray | None = None,
 ) -> SimpleNamespace:
     """
     Create an ADC readout event.
 
     Parameters
     ----------
-    num_samples: int
-        Number of readout samples.
-    system : Opts, default=Opts()
-        System limits. Default is a system limits object initialized to default values.
-    dwell : float, default=0
-        ADC dead time in seconds (s) after sampling.
-    duration : float, default=0
-        Duration in seconds (s) of ADC readout event with `num_samples` number of samples.
+    num_samples : int
+        Number of readout samples. Must be a positive integer.
     delay : float, default=0
         Delay in seconds (s) of ADC readout event.
+    duration : float, default=0
+        Duration in seconds (s) of ADC readout event with `num_samples` number of samples.
+    dwell : float, default=0
+        Dwell time in seconds (s) of ADC readout event, i.e. the time between samples.
     freq_offset : float, default=0
-        Frequency offset of ADC readout event.
+        Frequency offset in hertz (Hz) of ADC readout event.
     phase_offset : float, default=0
-        Phase offset of ADC readout event.
+        Phase offset in radians (rad) of ADC readout event.
+    system : Opts, default=Opts()
+        System limits. Default is a system limits object initialized to default values.
     freq_ppm : float, default=0
-        PPM frequency offset of ADC readout event.
+        PPM frequency offset in parts per million (ppm) of ADC readout event.
     phase_ppm : float, default=0
-        PPM phase offset of ADC readout event.
+        PPM phase offset in radians per megahertz (rad/MHz) of ADC readout event.
     phase_modulation : Union[np.ndarray, None], default=None
         Phase modulation array for FOV shifting.
         If provided, it must have `num_samples` number of samples.
@@ -57,14 +57,35 @@ def make_adc(
     Raises
     ------
     ValueError
+        If `num_samples` is not a positive integer.
+        If `dwell`, `duration` or `delay` is negative or not finite.
         If neither `dwell` nor `duration` are defined.
+        If `phase_modulation` does not have `num_samples` elements.
     """
     if system is None:
         system = Opts.default
 
+    if not isinstance(num_samples, numbers.Integral) or isinstance(num_samples, bool) or num_samples <= 0:
+        raise ValueError('num_samples must be a positive integer.')
+
+    if not np.isfinite(dwell) or dwell < 0:
+        raise ValueError('Dwell must be non-negative.')
+
+    if not np.isfinite(duration) or duration < 0:
+        raise ValueError('Duration must be non-negative.')
+
+    if not np.isfinite(delay) or delay < 0:
+        raise ValueError('Delay must be non-negative.')
+
+    if (dwell == 0 and duration == 0) or (dwell > 0 and duration > 0):
+        raise ValueError('Either dwell or duration must be defined')
+
+    if phase_modulation is not None and len(phase_modulation) != num_samples:
+        raise ValueError('ADC Phase modulation vector must have the same length as the number of samples')
+
     adc = SimpleNamespace()
     adc.type = 'adc'
-    adc.num_samples = num_samples
+    adc.num_samples = int(num_samples)
     adc.dwell = dwell
     adc.delay = delay
     adc.freq_offset = freq_offset
@@ -72,16 +93,11 @@ def make_adc(
     adc.freq_ppm = freq_ppm
     adc.phase_ppm = phase_ppm
     adc.dead_time = system.adc_dead_time
-
-    if (dwell == 0 and duration == 0) or (dwell > 0 and duration > 0):
-        raise ValueError('Either dwell or duration must be defined')
-
-    if phase_modulation is not None and len(phase_modulation) != num_samples:
-        raise ValueError('ADC Phase modulation vector must have the same length as the number of samples')
     adc.phase_modulation = phase_modulation
 
     if duration > 0:
         adc.dwell = duration / num_samples
+        adc.duration = duration
 
     if dwell > 0:
         adc.duration = dwell * num_samples
@@ -100,8 +116,8 @@ def make_adc(
 
 
 def calc_adc_segments(
-    num_samples: int, dwell: float, system: Union[Opts, None] = None, mode: str = 'lengthen'
-) -> Tuple[int, int]:
+    num_samples: int, dwell: float, system: Opts | None = None, mode: str = 'lengthen'
+) -> tuple[int, int]:
     """Calculate splitting of the ADC in segments with equal samples.
 
     Parameters
@@ -208,7 +224,7 @@ def calc_adc_segments(
     return int(num_segments), int(num_samples_seg)
 
 
-def _prime_factors(n: int) -> List[int]:
+def _prime_factors(n: int) -> list[int]:
     """Compute the prime factors of given integer n."""
     if n == 1:
         return [1]

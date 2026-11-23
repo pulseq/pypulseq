@@ -1,14 +1,14 @@
-from typing import Iterable, Union
+from collections.abc import Iterable
 
 import numpy as np
 
 
 def convert(
-    from_value: Union[float, Iterable],
+    from_value: float | Iterable,
     from_unit: str,
     gamma: float = 42.576e6,
-    to_unit: str = str(),
-) -> Union[float, Iterable]:
+    to_unit: str = '',
+) -> float | Iterable:
     """
     Converts gradient amplitude or slew rate from unit `from_unit` to unit `to_unit` with gyromagnetic ratio `gamma`.
 

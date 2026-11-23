@@ -1,5 +1,6 @@
 """Tests for the make_trapezoid module"""
 
+import numpy as np
 import pytest
 from pypulseq import Opts, eps, make_trapezoid
 
@@ -27,19 +28,19 @@ def test_flat_time_error():
 def test_area_too_large_error():
     errstr = 'Requested area is too large for this gradient. Minimum required duration is'
 
-    with pytest.raises(AssertionError, match=errstr):
+    with pytest.raises(ValueError, match=errstr):
         make_trapezoid(channel='x', area=1e6, duration=1e-6)
 
 
 def test_area_too_large_error_rise_time():
     errstr = 'Requested area is too large for this gradient. Probably amplitude is violated'
 
-    with pytest.raises(AssertionError, match=errstr):
+    with pytest.raises(ValueError, match=errstr):
         make_trapezoid(channel='x', area=1e6, duration=1e-6, rise_time=1e-7)
 
 
 def test_no_area_no_duration_error():
-    errstr = 'Must supply area or duration.'
+    errstr = r'Must supply `duration` or `flat_time` when `amplitude` is provided.'
 
     with pytest.raises(ValueError, match=errstr):
         make_trapezoid(channel='x', amplitude=1)
@@ -81,6 +82,48 @@ def compare_trap_out(trap, amplitude, rise_time, flat_time, fall_time):
     assert abs(trap.rise_time - rise_time) < eps
     assert abs(trap.flat_time - flat_time) < eps
     assert abs(trap.fall_time - fall_time) < eps
+
+
+def test_invalid_duration():
+    for invalid in [0, -1e-3, np.nan, np.inf]:
+        with pytest.raises(ValueError, match='Duration must be positive'):
+            make_trapezoid(channel='x', area=1, duration=invalid)
+
+
+def test_negative_delay():
+    with pytest.raises(ValueError, match='Delay must be non-negative'):
+        make_trapezoid(channel='x', area=1, delay=-1e-6)
+
+
+def test_negative_times():
+    with pytest.raises(ValueError, match='rise_time must be non-negative'):
+        make_trapezoid(channel='x', area=1, duration=1e-3, rise_time=-1e-4)
+
+    # `fall_time` defaults to `rise_time`, so a valid `rise_time` is needed to isolate it
+    with pytest.raises(ValueError, match='fall_time must be non-negative'):
+        make_trapezoid(channel='x', area=1, duration=1e-3, rise_time=1e-4, fall_time=-1e-4)
+
+    with pytest.raises(ValueError, match='flat_time must be non-negative'):
+        make_trapezoid(channel='x', amplitude=1, flat_time=-1e-4)
+
+
+def test_nonfinite_values():
+    with pytest.raises(ValueError, match='amplitude must be finite'):
+        make_trapezoid(channel='x', amplitude=np.nan, duration=1e-3)
+
+    with pytest.raises(ValueError, match='area must be finite'):
+        make_trapezoid(channel='x', area=np.inf)
+
+    with pytest.raises(ValueError, match='flat_area must be finite'):
+        make_trapezoid(channel='x', flat_area=np.nan, flat_time=1e-3)
+
+
+def test_invalid_limits():
+    with pytest.raises(ValueError, match='max_grad must be positive'):
+        make_trapezoid(channel='x', area=1, max_grad=0)
+
+    with pytest.raises(ValueError, match='max_slew must be positive'):
+        make_trapezoid(channel='x', area=1, max_slew=-1)
 
 
 def test_generation_methods():

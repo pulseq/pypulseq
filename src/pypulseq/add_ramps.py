@@ -1,6 +1,5 @@
 from copy import copy
 from types import SimpleNamespace
-from typing import List, Union
 
 import numpy as np
 
@@ -9,13 +8,13 @@ from pypulseq.opts import Opts
 
 
 def add_ramps(
-    k: Union[list, np.ndarray, tuple],
+    k: list | np.ndarray | tuple,
     max_grad: int = 0,
     max_slew: int = 0,
-    rf: Union[SimpleNamespace, None] = None,
-    system: Union[Opts, None] = None,
+    rf: SimpleNamespace | None = None,
+    system: Opts | None = None,
     oversampling: bool = False,
-) -> List[np.ndarray]:
+) -> list[np.ndarray]:
     """
     Add segments to the trajectory to ramp to and from the given trajectory.
 
@@ -30,9 +29,9 @@ def add_ramps(
     rf : SimpleNamespace, default=None
         Add a segment of zeros over the ramp times to an RF shape.
     max_grad : int, default=0
-        Maximum gradient amplitude.
+        Maximum gradient amplitude (Hz/m).
     max_slew : int, default=0
-        Maximum slew rate.
+        Maximum slew rate (Hz/m/s).
     oversampling : bool, default=False
         Boolean flag to indicate if gradient is oversampled by a factor of 2.
 

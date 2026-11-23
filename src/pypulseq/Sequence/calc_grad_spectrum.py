@@ -1,5 +1,3 @@
-from typing import List, Tuple, Union
-
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.signal import spectrogram
@@ -10,12 +8,12 @@ def calculate_gradient_spectrum(
     max_frequency: float = 2000.0,
     window_width: float = 0.05,
     frequency_oversampling: float = 3.0,
-    time_range: Union[List[float], None] = None,
+    time_range: list[float] | None = None,
     plot: bool = True,
     combine_mode: str = 'max',
     use_derivative: bool = False,
-    acoustic_resonances: Union[List[dict], None] = None,
-) -> Tuple[List[np.ndarray], np.ndarray, np.ndarray, np.ndarray]:
+    acoustic_resonances: list[dict] | None = None,
+) -> tuple[list[np.ndarray], np.ndarray, np.ndarray, np.ndarray]:
     """
     Calculates the gradient spectrum of the sequence. Returns a spectrogram
     for each gradient channel, as well as a root-sum-squares combined
@@ -29,15 +27,15 @@ def calculate_gradient_spectrum(
     Parameters
     ----------
     max_frequency : float, optional
-        Maximum frequency to include in spectrograms. The default is 2000.
+        Maximum frequency in hertz (Hz) to include in spectrograms. The default is 2000.
     window_width : float, optional
-        Window width (in seconds). The default is 0.05.
+        Window width in seconds (s). The default is 0.05.
     frequency_oversampling : float, optional
         Oversampling in the frequency dimension, higher values make
         smoother spectrograms. The default is 3.
     time_range : List[float], optional
-        Time range over which to calculate the spectrograms as a list of
-        two timepoints (in seconds) (e.g. [1, 1.5])
+        Time range in seconds (s) over which to calculate the spectrograms as a list of
+        two timepoints (e.g. [1, 1.5])
         The default is None.
     plot : bool, optional
         Whether to plot the spectograms. The default is True.
@@ -96,7 +94,7 @@ def calculate_gradient_spectrum(
         gw = np.diff(gw, axis=1)
 
     # Calculate spectrogram for each gradient channel
-    spectrograms: List[np.ndarray] = []
+    spectrograms: list[np.ndarray] = []
     spectrogram_rss = 0
 
     for i in range(ng):
