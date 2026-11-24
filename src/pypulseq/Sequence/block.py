@@ -164,6 +164,14 @@ def set_block(self, block_index: int, *args: SimpleNamespace | float) -> None:
                 duration = max(duration, event.default_duration)
                 ext = {'type': self.get_extension_type_ID('DELAYS'), 'ref': event_id}
                 extensions.append(ext)
+            elif event.type == 'rf_shim':
+                if hasattr(event, 'id'):
+                    event_id = event.id
+                else:
+                    event_id = register_rf_shim_event(self, event)
+
+                ext = {'type': self.get_extension_type_ID('RF_SHIMS'), 'ref': event_id}
+                extensions.append(ext)
             else:
                 raise ValueError(f'Unknown event type {event.type} passed to set_block().')
         else:
@@ -381,6 +389,19 @@ def get_block(self, block_index: int, add_IDs: bool = False) -> SimpleNamespace:
             if add_IDs:
                 block.soft_delay.id = delay_ext[1].item()
 
+        # Unpack RF Shim
+        rf_shim_ext = raw_block.ext[:, raw_block.ext[0] == self.get_extension_type_ID('RF_SHIMS', update=False)]
+        if rf_shim_ext.shape[-1] > 0:
+            if rf_shim_ext.shape[-1] > 1:
+                raise ValueError('Only one RF shim extension object per block is allowed')
+            data = self.rf_shim_library.data[rf_shim_ext[1].item()]
+            data = np.asarray(data)
+            block.rf_shim = SimpleNamespace()
+            block.rf_shim.type = 'rf_shim'
+            block.rf_shim.shim_vector = data[0::2] * np.exp(1j * data[1::2])
+            if add_IDs:
+                block.rf_shim.id = rf_shim_ext[1].item()
+
         if trig_ext.shape[-1] + label_ext.shape[-1] != raw_block.ext.shape[-1]:
             for i in range(raw_block.ext.shape[1]):
                 ext_id = raw_block.ext[0, i]
@@ -389,6 +410,7 @@ def get_block(self, block_index: int, add_IDs: bool = False) -> SimpleNamespace:
                     and ext_id != self.get_extension_type_ID('LABELSET', update=False)
                     and ext_id != self.get_extension_type_ID('LABELINC', update=False)
                     and ext_id != self.get_extension_type_ID('DELAYS', update=False)
+                    and ext_id != self.get_extension_type_ID('RF_SHIMS', update=False)
                 ):
                     warnings.warn(f'Unknown extension ID {ext_id}')
 
@@ -762,6 +784,27 @@ def register_soft_delay_event(self, event: SimpleNamespace) -> int:
     if self.use_block_cache and found:
         self.block_cache.clear()
     return soft_delay_id
+
+
+def register_rf_shim_event(self, event: SimpleNamespace) -> int:
+    """
+    Parameters
+    ----------
+    event : SimpleNamespace
+        RF shim event to be registered.
+
+    Returns
+    -------
+    int
+        ID of registered RF shim event.
+    """
+    # Interleave magnitudes and phases: (magn_c1, phase_c1, magn_c2, phase_c2, ...)
+    data = np.stack((np.abs(event.shim_vector), np.angle(event.shim_vector)), axis=-1).ravel()
+    data = tuple(data.tolist())
+    rf_shim_id, found = self.rf_shim_library.find_or_insert(new_data=data)
+    if self.use_block_cache and found:
+        self.block_cache.clear()
+    return rf_shim_id
 
 
 def register_rf_event(self, event: SimpleNamespace) -> tuple[int, list[int]]:

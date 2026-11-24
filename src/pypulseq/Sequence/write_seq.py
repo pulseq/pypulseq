@@ -240,6 +240,19 @@ def write(self, file_name: str | Path, create_signature, remove_duplicates=True)
                 output_file.write(s)
             output_file.write('\n')
 
+        if len(self.rf_shim_library.data) != 0:
+            output_file.write('# Extension specification for RF shimming:\n')
+            output_file.write('# id num_chan magn_c1 phase_c1 magn_c2 phase_c2 ...\n')
+
+            tid = self.get_extension_type_ID('RF_SHIMS')
+            output_file.write(f'extension RF_SHIMS {tid}\n')
+
+            for k in self.rf_shim_library.data:
+                data = self.rf_shim_library.data[k]
+                s = f'{k:.0f} {len(data) // 2:.0f}' + ''.join(f' {d:g}' for d in data) + '\n'
+                output_file.write(s)
+            output_file.write('\n')
+
         if len(self.shape_library.data) != 0:
             output_file.write('# Sequence Shapes\n')
             output_file.write('[SHAPES]\n\n')
@@ -498,6 +511,11 @@ def write_v141(self, file_name: str | Path, create_signature, remove_duplicates=
         if len(self.soft_delay_library.data) != 0:
             warn(
                 'WARNING! The sequence in memory uses "soft delay" extension, which is incompatible with the file format v1.4.1. The produced Pulseq file is only partially valid and may fail to load or operate in some cases.'
+            )
+
+        if len(self.rf_shim_library.data) != 0:
+            raise RuntimeError(
+                'WARNING! The sequence in memory uses the "RF shimming" extension, which is incompatible with the file format v1.4.1. The produced Pulseq file is likely to be invalid and would probably fail to operate'
             )
 
         if len(self.shape_library.data) != 0:
