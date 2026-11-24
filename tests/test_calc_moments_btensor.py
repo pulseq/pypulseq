@@ -39,18 +39,18 @@ def test_calc_moments_btensor_basic_properties():
 
     # ---- Target b-value ----
     b_target = 1000e6  # s/m^2 (1000 s/mm^2)
-    TE = 80e-3
+    te = 80e-3
     delta = 10e-3
-    Delta = 30e-3
+    big_delta = 30e-3
 
     # Solve for gradient amplitude (Hz/m)
-    G = (1 / (2 * np.pi * delta)) * np.sqrt(b_target / (Delta - delta / 3))
+    g_amp = (1 / (2 * np.pi * delta)) * np.sqrt(b_target / (big_delta - delta / 3))
 
     # ---- Define diffusion gradient lobe ----
-    g = pp.make_trapezoid(channel='z', system=sys, amplitude=G, duration=delta)
+    g = pp.make_trapezoid(channel='z', system=sys, amplitude=g_amp, duration=delta)
 
     # Interval between end of first g and start of second g
-    diff_wait = Delta - delta
+    diff_wait = big_delta - delta
 
     # RF free time
     rf_free_time = diff_wait - pp.calc_duration(rf180)
@@ -62,7 +62,7 @@ def test_calc_moments_btensor_basic_properties():
     texc_center, _ = pp.calc_rf_center(rf90)
     tref_center, _ = pp.calc_rf_center(rf180)
     t_ref = (pp.calc_duration(rf90) - texc_center) + pp.calc_duration(g) + g_wait + tref_center
-    te_wait = 0.5 * TE - t_ref
+    te_wait = 0.5 * te - t_ref
 
     # ---- Timing layout ----
     seq.add_block(rf90)
@@ -74,34 +74,34 @@ def test_calc_moments_btensor_basic_properties():
     seq.add_block(g)
 
     # ---- Run moment calculator -----
-    B, m1, m2, m3 = seq.calc_moments_btensor()  # defaults: calcB=True only
+    b, m1, m2, m3 = seq.calc_moments_btensor()  # defaults: calc_b=True only
 
     # Shapes
-    assert B.ndim == 3 and B.shape[1:] == (3, 3)
-    assert m1.shape == (B.shape[0], 3)
-    assert m2.shape == (B.shape[0], 3)
-    assert m3.shape == (B.shape[0], 3)
+    assert b.ndim == 3 and b.shape[1:] == (3, 3)
+    assert m1.shape == (b.shape[0], 3)
+    assert m2.shape == (b.shape[0], 3)
+    assert m3.shape == (b.shape[0], 3)
 
     # With one excitation this will be one repetition
-    assert B.shape[0] == 1
+    assert b.shape[0] == 1
 
     # Symmetry
-    assert np.allclose(B[0], B[0].T, atol=1e-10, rtol=1e-10)
+    assert np.allclose(b[0], b[0].T, atol=1e-10, rtol=1e-10)
 
     # PSD (numerical tolerance)
-    assert _eig_min(B[0]) > -1e-8
+    assert _eig_min(b[0]) > -1e-8
 
     # Dominant zz for z-only gradients
-    assert B[0, 2, 2] >= B[0, 0, 0]
-    assert B[0, 2, 2] >= B[0, 1, 1]
+    assert b[0, 2, 2] >= b[0, 0, 0]
+    assert b[0, 2, 2] >= b[0, 1, 1]
 
     # Off-diagonals should be ~0 (no x/y)
-    assert abs(B[0, 0, 1]) < 1e-10
-    assert abs(B[0, 0, 2]) < 1e-10
-    assert abs(B[0, 1, 2]) < 1e-10
+    assert abs(b[0, 0, 1]) < 1e-10
+    assert abs(b[0, 0, 2]) < 1e-10
+    assert abs(b[0, 1, 2]) < 1e-10
 
     # Convert to physical b-value (radians)
-    b_measured = B[0, 2, 2]
+    b_measured = b[0, 2, 2]
 
     # Check quantitative correctness
     assert np.isclose(b_measured, b_target, rtol=1e-2)
@@ -125,9 +125,9 @@ def test_calc_moments_btensor_moments_flags():
     seq.add_block(g)
     seq.add_block(pp.make_delay(2e-3))
 
-    B, m1, m2, m3 = seq.calc_moments_btensor(True, True, True, True, 0)
+    b, m1, m2, m3 = seq.calc_moments_btensor(True, True, True, True, 0)
 
     assert np.any(np.abs(m1) > 0)
     assert np.any(np.abs(m2) > 0)
     assert np.any(np.abs(m3) > 0)
-    assert np.any(np.abs(B) > 0)
+    assert np.any(np.abs(b) > 0)

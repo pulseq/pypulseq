@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import typing
 from math import comb
-from typing import Tuple, Union
 
 import numpy as np
 from scipy.interpolate import PPoly
@@ -13,12 +12,12 @@ if typing.TYPE_CHECKING:
 
 def calc_moments_btensor(
     seq: Sequence,
-    calcB: bool = True,
-    calcm1: bool = False,
-    calcm2: bool = False,
-    calcm3: bool = False,
-    Ndummy: int = 0,
-) -> Tuple[np.ndarray, ...]:
+    calc_b: bool = True,
+    calc_m1: bool = False,
+    calc_m2: bool = False,
+    calc_m3: bool = False,
+    n_dummy: int = 0,
+) -> tuple[np.ndarray, ...]:
     """
     B-tensor calculator for Sequence object.
 
@@ -26,20 +25,20 @@ def calc_moments_btensor(
     ----------
     seq : Sequence
         The Pulseq sequence object to plot.
-    calcB : bool, default=True
+    calc_b : bool, default=True
         Toggle B-Tensor calculation.
-    calcm1 : bool, default=False
+    calc_m1 : bool, default=False
         Toggle first-order gradient moment calculation.
-    calcm2 : bool, default=False
+    calc_m2 : bool, default=False
         Toggle second-order gradient moment calculation.
-    calcm3: bool, default=False
+    calc_m3 : bool, default=False
         Toggle third-order gradient moment calculation.
-    Ndummy : int, default=0
+    n_dummy : int, default=0
         Number of dummy scans to be skipped for the calculation.
 
     Returns
     -------
-    B : np.ndarray
+    b : np.ndarray
         The B-tensor for each of the R sequence repetitions.
         It is shaped (R, 3, 3).
     m1 : np.ndarray
@@ -59,25 +58,25 @@ def calc_moments_btensor(
     - TE per repetition is computed as t_echo = 2*t_refocusing - t_excitation
       (same limitation as MATLAB: not correct for more complex refocusing schemes).
     """
-    if calcB is False and calcm1 is False and calcm2 is False and calcm3 is False:
+    if calc_b is False and calc_m1 is False and calc_m2 is False and calc_m3 is False:
         raise ValueError('At least one output among B, m1, m2, m3 must be requested')
-    if Ndummy < 0:
-        raise ValueError('Ndummy must be >= 0')
+    if n_dummy < 0:
+        raise ValueError('n_dummy must be >= 0')
 
     # Get RF timing
     t_excitation, _, t_refocusing, _ = seq.rf_times()
-    R_all = len(t_excitation)
-    if R_all == 0:
+    n_exc = len(t_excitation)
+    if n_exc == 0:
         raise ValueError('No excitations found in sequence (t_excitation is empty).')
 
-    if len(t_refocusing) < R_all:
+    if len(t_refocusing) < n_exc:
         raise ValueError(
             'Not enough refocusing pulses found for calc_moments_btensor. '
-            f'Need at least {R_all}, found {len(t_refocusing)}.'
+            f'Need at least {n_exc}, found {len(t_refocusing)}.'
         )
 
-    if Ndummy >= R_all:
-        raise ValueError(f'Ndummy={Ndummy} must be < number of excitations ({R_all}).')
+    if n_dummy >= n_exc:
+        raise ValueError(f'n_dummy={n_dummy} must be < number of excitations ({n_exc}).')
 
     # Gradients as PPoly (x,y,z)
     gw_pp = seq.get_gradients()
@@ -92,7 +91,7 @@ def calc_moments_btensor(
     grad_knots = np.concatenate(grad_knots) if grad_knots else np.array([], dtype=float)
 
     t_exc = np.asarray(t_excitation, dtype=float)
-    t_ref = np.asarray(t_refocusing[:R_all], dtype=float)
+    t_ref = np.asarray(t_refocusing[:n_exc], dtype=float)
     t_echo = 2.0 * t_ref - t_exc  # MATLAB TODO caveat
     tn = _unique_sorted(np.concatenate([grad_knots, t_exc, t_ref, t_echo]))
 
@@ -103,20 +102,20 @@ def calc_moments_btensor(
     g_lin = [_fill_pp_coefs(gw_pp[i], tn) for i in range(3)]
 
     # repetitions after dummy
-    R = R_all - Ndummy
+    n_rep = n_exc - n_dummy
 
-    B = np.zeros((R, 3, 3), dtype=float)
-    m1 = np.zeros((R, 3), dtype=float)
-    m2 = np.zeros((R, 3), dtype=float)
-    m3 = np.zeros((R, 3), dtype=float)
+    b = np.zeros((n_rep, 3, 3), dtype=float)
+    m1 = np.zeros((n_rep, 3), dtype=float)
+    m2 = np.zeros((n_rep, 3), dtype=float)
+    m3 = np.zeros((n_rep, 3), dtype=float)
 
     seq_end = float(tn[-1])
 
-    for r in range(R):
-        k = r + Ndummy  # absolute repetition index in t_exc/t_ref arrays
+    for r in range(n_rep):
+        k = r + n_dummy  # absolute repetition index in t_exc/t_ref arrays
 
         t0 = float(t_exc[k])
-        t1 = float(t_exc[k + 1]) if (k < R_all - 1) else seq_end
+        t1 = float(t_exc[k + 1]) if (k < n_exc - 1) else seq_end
         te = float(t_echo[k])
         tref = float(t_ref[k])
 
@@ -146,7 +145,7 @@ def calc_moments_btensor(
                 vals = g_tr[i](t_int)
                 g_samp.append(np.nan_to_num(vals, nan=0.0))
 
-        if calcB:
+        if calc_b:
             # q(t) = 2*pi * integral g dt (piecewise quadratic)
             q_pp = []
             for i in range(3):
@@ -164,21 +163,21 @@ def calc_moments_btensor(
                     c = np.stack(
                         [np.convolve(q_pp[i].c[:, k], q_pp[j].c[:, k]) for k in range(q_pp[i].c.shape[1])], axis=-1
                     )
-                    B[r, i, j] = float(PPoly(c, q_pp[i].x, extrapolate=False).antiderivative()(te))
+                    b[r, i, j] = float(PPoly(c, q_pp[i].x, extrapolate=False).antiderivative()(te))
 
-        if calcm1:
+        if calc_m1:
             for i in range(3):
                 m1[r, i] = 2.0 * np.pi * _integrate_g_tn(g_samp[i], t_int - t0, n=1)
 
-        if calcm2:
+        if calc_m2:
             for i in range(3):
                 m2[r, i] = 2.0 * np.pi * _integrate_g_tn(g_samp[i], t_int - t0, n=2)
 
-        if calcm3:
+        if calc_m3:
             for i in range(3):
                 m3[r, i] = 2.0 * np.pi * _integrate_g_tn(g_samp[i], t_int - t0, n=3)
 
-    return B, m1, m2, m3
+    return b, m1, m2, m3
 
 
 def _unique_sorted(x: np.ndarray) -> np.ndarray:
@@ -189,7 +188,7 @@ def _unique_sorted(x: np.ndarray) -> np.ndarray:
     return np.unique(x)
 
 
-def _fill_pp_coefs(pp: Union[PPoly, None], xn: np.ndarray) -> Union[PPoly, None]:
+def _fill_pp_coefs(pp: PPoly | None, xn: np.ndarray) -> PPoly | None:
     """
     Direct translation of MATLAB's fillPpCoefs function.
     """
@@ -229,7 +228,7 @@ def _fill_pp_coefs(pp: Union[PPoly, None], xn: np.ndarray) -> Union[PPoly, None]
     return PPoly(new_coefs, xn, extrapolate=False)
 
 
-def _restrict_piecewise_linear(pp_lin: Union[PPoly, None], a: float, b: float) -> Union[PPoly, None]:
+def _restrict_piecewise_linear(pp_lin: PPoly | None, a: float, b: float) -> PPoly | None:
     if pp_lin is None:
         return None
     if b <= a:
@@ -239,7 +238,7 @@ def _restrict_piecewise_linear(pp_lin: Union[PPoly, None], a: float, b: float) -
     return _fill_pp_coefs(pp_lin, grid)  # ← Changed
 
 
-def _flip_after(pp_lin: Union[PPoly, None], t_flip: float) -> Union[PPoly, None]:
+def _flip_after(pp_lin: PPoly | None, t_flip: float) -> PPoly | None:
     if pp_lin is None:
         return None
 

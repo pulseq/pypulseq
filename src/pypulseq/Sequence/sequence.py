@@ -288,31 +288,31 @@ class Sequence:
 
     def calc_moments_btensor(
         self,
-        calcB: bool = True,
-        calcm1: bool = False,
-        calcm2: bool = False,
-        calcm3: bool = False,
-        Ndummy: int = 0,
+        calc_b: bool = True,
+        calc_m1: bool = False,
+        calc_m2: bool = False,
+        calc_m3: bool = False,
+        n_dummy: int = 0,
     ):
         """
         B-tensor calculator.
 
         Parameters
         ----------
-        calcB : bool, default=True
+        calc_b : bool, default=True
             Toggle B-Tensor calculation.
-        calcm1 : bool, default=False
+        calc_m1 : bool, default=False
             Toggle first-order gradient moment calculation.
-        calcm2 : bool, default=False
+        calc_m2 : bool, default=False
             Toggle second-order gradient moment calculation.
-        calcm3: bool, default=False
+        calc_m3 : bool, default=False
             Toggle third-order gradient moment calculation.
-        Ndummy : int, default=0
+        n_dummy : int, default=0
             Number of dummy scans to be skipped for the calculation.
 
         Returns
         -------
-        B : np.ndarray
+        b : np.ndarray
             The B-tensor for each of the R sequence repetitions.
             It is shaped (R, 3, 3).
         m1 : np.ndarray
@@ -332,7 +332,7 @@ class Sequence:
         - TE per repetition is computed as t_echo = 2*t_refocusing - t_excitation
           (same limitation as MATLAB: not correct for more complex refocusing schemes).
         """
-        return calc_moments_btensor(self, calcB, calcm1, calcm2, calcm3, Ndummy)
+        return calc_moments_btensor(self, calc_b, calc_m1, calc_m2, calc_m3, n_dummy)
 
     def calculate_kspace(
         self,
