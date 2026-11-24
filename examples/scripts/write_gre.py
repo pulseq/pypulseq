@@ -158,4 +158,4 @@ def main(
 
 
 if __name__ == '__main__':
-    main(plot=True, write_seq=True)
+    main(plot=True, write_seq=True, play_sound=True)
