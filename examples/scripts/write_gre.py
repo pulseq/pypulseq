@@ -7,6 +7,7 @@ def main(
     plot: bool = False,
     test_report: bool = False,
     write_seq: bool = False,
+    play_sound: bool = False,
     seq_filename: str = 'gre_pypulseq.seq',
     *,
     fov: float | tuple[float, float] = 256e-3,
@@ -150,8 +151,11 @@ def main(
     if write_seq:
         seq.write(seq_filename)
 
+    if play_sound:
+        seq.sound()
+
     return seq
 
 
 if __name__ == '__main__':
-    main(plot=True, write_seq=True)
+    main(plot=True, write_seq=True, play_sound=True)
