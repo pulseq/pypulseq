@@ -146,16 +146,25 @@ def calc_moments_btensor(
                 vals = g_tr[i](t_int)
                 g_samp.append(np.nan_to_num(vals, nan=0.0))
 
-        # q(t) = 2*pi * integral g dt
-        q_samp = []
-        for i in range(3):
-            area = _cumtrapz_on_breakpoints(g_samp[i], t_int)
-            q_samp.append(2.0 * np.pi * area)
-
         if calcB:
+            # q(t) = 2*pi * integral g dt (piecewise quadratic)
+            q_pp = []
+            for i in range(3):
+                if g_tr[i] is None:
+                    q_pp.append(None)
+                else:
+                    q = g_tr[i].antiderivative()
+                    q_pp.append(PPoly(2.0 * np.pi * q.c, q.x, extrapolate=False))
+
+            # B = integral q_i * q_j dt, evaluated at TE (as in MATLAB)
             for i in range(3):
                 for j in range(3):
-                    B[r, i, j] = _integrate_piecewise_linear_product(q_samp[i], q_samp[j], t_int)
+                    if q_pp[i] is None or q_pp[j] is None:
+                        continue
+                    c = np.stack(
+                        [np.convolve(q_pp[i].c[:, k], q_pp[j].c[:, k]) for k in range(q_pp[i].c.shape[1])], axis=-1
+                    )
+                    B[r, i, j] = float(PPoly(c, q_pp[i].x, extrapolate=False).antiderivative()(te))
 
         if calcm1:
             for i in range(3):
@@ -248,40 +257,6 @@ def _flip_after(pp_lin: Union[PPoly, None], t_flip: float) -> Union[PPoly, None]
     c2 = pp2.c.copy()
     c2[:, mask] *= -1
     return PPoly(c2, x2, extrapolate=False)
-
-
-def _cumtrapz_on_breakpoints(y: np.ndarray, t: np.ndarray) -> np.ndarray:
-    """
-    Cumulative integral assuming y is piecewise-linear between breakpoints t.
-    Trapezoid on breakpoints is exact for linear segments.
-    """
-    dt = np.diff(t)
-    inc = 0.5 * (y[:-1] + y[1:]) * dt
-    return np.concatenate(([0.0], np.cumsum(inc)))
-
-
-def _integrate_piecewise_linear_product(u: np.ndarray, v: np.ndarray, t: np.ndarray) -> float:
-    """
-    Exact integral of u(t)*v(t) dt when u and v are piecewise-linear between breakpoints t.
-
-    On each interval, u=a_u*t+b_u, v=a_v*t+b_v => product quadratic.
-    """
-    dt = np.diff(t)
-    if dt.size == 0:
-        return 0.0
-
-    au = np.divide(np.diff(u), dt, out=np.zeros_like(dt), where=dt != 0)  # codespell:ignore
-    av = np.divide(np.diff(v), dt, out=np.zeros_like(dt), where=dt != 0)  # codespell:ignore
-    bu = u[:-1] - au * t[:-1]  # codespell:ignore
-    bv = v[:-1] - av * t[:-1]  # codespell:ignore
-
-    A = au * av  # codespell:ignore
-    B = au * bv + av * bu  # codespell:ignore
-    C = bu * bv  # codespell:ignore
-
-    t0 = t[:-1]
-    t1 = t[1:]
-    return float(np.sum(A * (t1**3 - t0**3) / 3.0 + B * (t1**2 - t0**2) / 2.0 + C * (t1 - t0)))
 
 
 def _integrate_g_tn(g: np.ndarray, t: np.ndarray, n: int) -> float:
