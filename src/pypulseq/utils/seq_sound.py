@@ -26,25 +26,33 @@ def seq_sound(
     """
     Play out the sequence through the system speaker and return the sound data.
 
+    The stereo sound data is produced from the gradient waveforms: the X gradient is mapped to the left channel,
+    the Y gradient to the right channel and the Z gradient is split equally between both channels. The result
+    is Gauss-filtered to reduce high-frequency ringing and normalized to a peak amplitude of 0.95.
+
     Parameters
     ----------
     seq : Sequence
-        The Pulseq sequence object to played.
+        The Pulseq sequence to be played.
     time_range : tuple[float, float], default=(0.0, np.inf)
-        Time range for playing the sequence.
+        Start and end time in seconds of the part of the sequence to be played.
         Default is 0 to infinity (entire sequence).
     channel_weights : tuple[float, float, float], default=(1.0, 1.0, 1.0)
-        Weight for each gradient channel.
+        Weights applied to the X, Y and Z gradient waveforms before they are mixed into the sound data.
     sample_rate : int, default=44100
-        Sampling rate for audio waveform
+        Sampling rate of the audio waveform in Hz.
     only_produce_sound_data : bool, default=False
-        If True, skip the playing part and only produce
-        the sound data
+        If True, skip the playback and only return the sound data.
 
     Returns
     -------
     sound_data : np.ndarray
-        Sound data of shape (2, N)
+        Sound data of shape (2, N) with rows (left, right) sampled at `sample_rate`, normalized to [-0.95, 0.95].
+
+    Raises
+    ------
+    RuntimeError
+        If `only_produce_sound_data` is False and the optional `sounddevice` package is not installed.
     """
     # --- get waveform data ---
     gw_data = seq.waveforms(append_RF=False, time_range=time_range)

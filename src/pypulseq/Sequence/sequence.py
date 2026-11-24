@@ -929,31 +929,40 @@ class Sequence:
 
     def sound(
         self,
-        time_range=(0.0, np.inf),
-        channel_weights: tuple = (1.0, 1.0, 1.0),
+        time_range: tuple[float, float] = (0.0, np.inf),
+        channel_weights: tuple[float, float, float] = (1.0, 1.0, 1.0),
         sample_rate: int = 44100,
         only_produce_sound_data: bool = False,
     ) -> np.ndarray:
         """
         Play out the sequence through the system speaker and return the sound data.
 
+        The stereo sound data is produced from the gradient waveforms: the X gradient is mapped to the left channel,
+        the Y gradient to the right channel and the Z gradient is split equally between both channels. The result
+        is Gauss-filtered to reduce high-frequency ringing and normalized to a peak amplitude of 0.95.
+        See `pypulseq.utils.seq_sound.seq_sound()` for details.
+
         Parameters
         ----------
-        time_range : iterable, default=(0, np.inf)
-            Time range for playing the sequence.
+        time_range : tuple[float, float], default=(0.0, np.inf)
+            Start and end time in seconds of the part of the sequence to be played.
             Default is 0 to infinity (entire sequence).
-        channel_weights : tuple, default=(1.0, 1.0, 1.0)
-            Weight for each gradient channel.
+        channel_weights : tuple[float, float, float], default=(1.0, 1.0, 1.0)
+            Weights applied to the X, Y and Z gradient waveforms before they are mixed into the sound data.
         sample_rate : int, default=44100
-            Sampling rate for audio waveform
+            Sampling rate of the audio waveform in Hz.
         only_produce_sound_data : bool, default=False
-            If True, skip the playing part and only produce
-            the sound data
+            If True, skip the playback and only return the sound data.
 
         Returns
         -------
         sound_data : np.ndarray
-            Sound data of shape (2, N)
+            Sound data of shape (2, N) with rows (left, right) sampled at `sample_rate`, normalized to [-0.95, 0.95].
+
+        Raises
+        ------
+        RuntimeError
+            If `only_produce_sound_data` is False and the optional `sounddevice` package is not installed.
         """
         return seq_sound(self, time_range, channel_weights, sample_rate, only_produce_sound_data)
 
