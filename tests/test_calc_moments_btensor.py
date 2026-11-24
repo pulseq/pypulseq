@@ -1,5 +1,6 @@
 import numpy as np
 import pypulseq as pp
+import pytest
 from pypulseq.Sequence.sequence import Sequence
 
 
@@ -131,3 +132,93 @@ def test_calc_moments_btensor_moments_flags():
     assert np.any(np.abs(m2) > 0)
     assert np.any(np.abs(m3) > 0)
     assert np.any(np.abs(b) > 0)
+
+
+def _make_dwi_se(n_rep: int = 2) -> Sequence:
+    # Diffusion-weighted spin echo with realistic (slow) slew rate and oblique diffusion directions
+    sys = pp.Opts(max_grad=80, grad_unit='mT/m', max_slew=50, slew_unit='T/m/s')
+    seq = Sequence(sys)
+
+    rf90 = pp.make_block_pulse(flip_angle=np.pi / 2, duration=1e-3, system=sys, use='excitation')
+    rf180 = pp.make_block_pulse(flip_angle=np.pi, duration=1e-3, system=sys, use='refocusing')
+
+    te = 90e-3
+    delta = 15e-3
+    big_delta = 35e-3
+    directions = [(0.48, 0.6, 0.64), (0, 0.6, 0.8)]
+
+    for r in range(n_rep):
+        g = [
+            pp.make_trapezoid(channel=ch, system=sys, amplitude=0.8 * sys.max_grad * c, duration=delta)
+            for ch, c in zip('xyz', directions[r % len(directions)], strict=True)
+            if c != 0
+        ]
+
+        g_wait = 0.5 * (big_delta - delta - pp.calc_duration(rf180))
+        g_wait = np.ceil(g_wait / sys.grad_raster_time) * sys.grad_raster_time
+        t_ref = (
+            (pp.calc_duration(rf90) - pp.calc_rf_center(rf90)[0] - rf90.delay)
+            + pp.calc_duration(*g)
+            + g_wait
+            + pp.calc_rf_center(rf180)[0]
+            + rf180.delay
+        )
+        te_wait = np.round((0.5 * te - t_ref) / sys.grad_raster_time) * sys.grad_raster_time
+
+        seq.add_block(rf90)
+        seq.add_block(pp.make_delay(te_wait))
+        seq.add_block(*g)
+        seq.add_block(pp.make_delay(g_wait))
+        seq.add_block(rf180)
+        seq.add_block(pp.make_delay(g_wait))
+        seq.add_block(*g)
+        seq.add_block(pp.make_delay(te + 20e-3))
+
+    return seq
+
+
+def test_calc_moments_btensor_matlab_reference(tmp_path):
+    # Write and read back, so that the gradients match those seen by MATLAB
+    filename = tmp_path / 'dwi_se.seq'
+    _make_dwi_se().write(str(filename))
+    seq = Sequence()
+    seq.read(filename)
+
+    b, m1, m2, m3 = seq.calc_moments_btensor(True, True, True, True, 0)
+
+    # Reference values from MATLAB Pulseq calcMomentsBtensor(true, true, true, true, 0) on the same .seq file
+    b_ref = [
+        [
+            [422059133.166, 522481719.621, 555496769.027],
+            [522481719.621, 646803061.202, 687675504.089],
+            [555496769.027, 687675504.089, 731131326.098],
+        ],
+        [
+            [0, 0, 0],
+            [0, 646803061.202, 847769380.931],
+            [0, 847769380.931, 1111201330.59],
+        ],
+    ]
+    m1_ref = [[-4138.46605624, -5119.14483084, -5441.2202917], [0, -5119.14483084, -6700.80524078]]
+    m2_ref = [[-372.461945061, -460.723034776, -489.709826253], [0, -460.723034776, -603.07247167]]
+    m3_ref = [[-26.62437566, -32.9282415702, -34.9981264325], [0, -32.9282415702, -43.0905704111]]
+
+    np.testing.assert_allclose(b, b_ref, rtol=1e-9, atol=1e-3)
+    np.testing.assert_allclose(m1, m1_ref, rtol=1e-9, atol=1e-9)
+    np.testing.assert_allclose(m2, m2_ref, rtol=1e-9, atol=1e-9)
+    np.testing.assert_allclose(m3, m3_ref, rtol=1e-9, atol=1e-9)
+
+
+def test_calc_moments_btensor_n_dummy():
+    seq = _make_dwi_se(n_rep=3)
+
+    ref = seq.calc_moments_btensor(True, True, True, True, 0)
+    out = seq.calc_moments_btensor(True, True, True, True, 1)
+
+    # Skipping dummy scans must return the remaining repetitions unchanged
+    for o, r in zip(out, ref, strict=True):
+        assert o.shape[0] == 2
+        np.testing.assert_allclose(o, r[1:])
+
+    with pytest.raises(ValueError):
+        seq.calc_moments_btensor(n_dummy=3)
