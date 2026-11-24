@@ -389,6 +389,19 @@ def get_block(self, block_index: int, add_IDs: bool = False) -> SimpleNamespace:
             if add_IDs:
                 block.soft_delay.id = delay_ext[1].item()
 
+        # Unpack RF Shim
+        rf_shim_ext = raw_block.ext[:, raw_block.ext[0] == self.get_extension_type_ID('RF_SHIMS', update=False)]
+        if rf_shim_ext.shape[-1] > 0:
+            if rf_shim_ext.shape[-1] > 1:
+                raise ValueError('Only one RF shim extension object per block is allowed')
+            data = self.rf_shim_library.data[rf_shim_ext[1].item()]
+            data = np.asarray(data)
+            block.rf_shim = SimpleNamespace()
+            block.rf_shim.type = 'rf_shim'
+            block.rf_shim.shim_vector = data[0::2] * np.exp(1j * data[1::2])
+            if add_IDs:
+                block.rf_shim.id = rf_shim_ext[1].item()
+
         if trig_ext.shape[-1] + label_ext.shape[-1] != raw_block.ext.shape[-1]:
             for i in range(raw_block.ext.shape[1]):
                 ext_id = raw_block.ext[0, i]
@@ -397,6 +410,7 @@ def get_block(self, block_index: int, add_IDs: bool = False) -> SimpleNamespace:
                     and ext_id != self.get_extension_type_ID('LABELSET', update=False)
                     and ext_id != self.get_extension_type_ID('LABELINC', update=False)
                     and ext_id != self.get_extension_type_ID('DELAYS', update=False)
+                    and ext_id != self.get_extension_type_ID('RF_SHIMS', update=False)
                 ):
                     warnings.warn(f'Unknown extension ID {ext_id}')
 
