@@ -3,7 +3,6 @@ from __future__ import annotations
 import typing
 
 import numpy as np
-from scipy.interpolate import interp1d
 from scipy.signal import convolve, windows
 
 try:
@@ -19,8 +18,8 @@ if typing.TYPE_CHECKING:
 
 def seq_sound(
     seq: Sequence,
-    time_range=(0.0, np.inf),
-    channel_weights: tuple = (1.0, 1.0, 1.0),
+    time_range: tuple[float, float] = (0.0, np.inf),
+    channel_weights: tuple[float, float, float] = (1.0, 1.0, 1.0),
     sample_rate: int = 44100,
     only_produce_sound_data: bool = False,
 ) -> np.ndarray:
@@ -31,10 +30,10 @@ def seq_sound(
     ----------
     seq : Sequence
         The Pulseq sequence object to played.
-    time_range : iterable, default=(0, np.inf)
+    time_range : tuple[float, float], default=(0.0, np.inf)
         Time range for playing the sequence.
         Default is 0 to infinity (entire sequence).
-    channel_weights : tuple, default=(1.0, 1.0, 1.0)
+    channel_weights : tuple[float, float, float], default=(1.0, 1.0, 1.0)
         Weight for each gradient channel.
     sample_rate : int, default=44100
         Sampling rate for audio waveform
@@ -48,54 +47,34 @@ def seq_sound(
         Sound data of shape (2, N)
     """
     # --- get waveform data ---
-    gw_data = seq.waveforms_and_times(False, time_range)
-    total_duration = np.sum(seq.block_durations)
+    gw_data = seq.waveforms(append_RF=False, time_range=time_range)
+    total_duration = sum(seq.block_durations.values())
+
+    t_start = max(0.0, time_range[0])
+    t_end = min(total_duration, time_range[1])
 
     dwell_time = 1.0 / sample_rate
-    sound_length = int(np.floor(total_duration / dwell_time)) + 1
+    sound_length = int(np.floor((t_end - t_start) / dwell_time)) + 1
 
     sound_data = np.zeros((2, sound_length), dtype=float)
 
-    t_out = np.arange(sound_length) * dwell_time
+    t_out = t_start + np.arange(sound_length) * dwell_time
 
-    # --- X channel → channel 1 ---
-    if gw_data[0] is not None and gw_data[0].size > 0:
-        f = interp1d(
-            gw_data[0][0],
-            gw_data[0][1] * channel_weights[0],
-            kind='linear',
-            bounds_error=False,
-            fill_value=0.0,
-        )
-        sound_data[0, :] = f(t_out)
+    def _interp(channel: np.ndarray, weight: float) -> np.ndarray:
+        if channel.shape[1] == 0:
+            return np.zeros(sound_length)
+        return np.interp(t_out, channel[0], channel[1] * weight, left=0.0, right=0.0)
 
-    # --- Y channel → channel 2 ---
-    if gw_data[1] is not None and gw_data[1].size > 0:
-        f = interp1d(
-            gw_data[1][0],
-            gw_data[1][1] * channel_weights[1],
-            kind='linear',
-            bounds_error=False,
-            fill_value=0.0,
-        )
-        sound_data[1, :] = f(t_out)
-
-    # --- Z channel → split equally ---
-    if gw_data[2] is not None and gw_data[2].size > 0:
-        f = interp1d(
-            gw_data[2][0],
-            0.5 * gw_data[2][1] * channel_weights[2],
-            kind='linear',
-            bounds_error=False,
-            fill_value=0.0,
-        )
-        tmp = f(t_out)
-        sound_data[0, :] += tmp
-        sound_data[1, :] += tmp
+    # --- X channel → channel 1, Y channel → channel 2, Z channel → split equally ---
+    sound_data[0, :] = _interp(gw_data[0], channel_weights[0])
+    sound_data[1, :] = _interp(gw_data[1], channel_weights[1])
+    tmp = _interp(gw_data[2], 0.5 * channel_weights[2])
+    sound_data[0, :] += tmp
+    sound_data[1, :] += tmp
 
     # --- Gaussian smoothing (same as MATLAB gausswin + conv) ---
     gw_len = int(round(sample_rate / 6000) * 2 + 1)
-    gw = windows.gaussian(gw_len, std=gw_len / 6)
+    gw = windows.gaussian(gw_len, std=(gw_len - 1) / 5)
     gw /= np.sum(gw)
 
     sound_data[0, :] = convolve(sound_data[0, :], gw, mode='same')
