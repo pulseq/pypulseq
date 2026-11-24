@@ -159,15 +159,15 @@ def calc_moments_btensor(
 
         if calcm1:
             for i in range(3):
-                m1[r, i] = 2.0 * np.pi * _integrate_g_tn(g_samp[i], t_int, n=1)
+                m1[r, i] = 2.0 * np.pi * _integrate_g_tn(g_samp[i], t_int - t0, n=1)
 
         if calcm2:
             for i in range(3):
-                m2[r, i] = 2.0 * np.pi * _integrate_g_tn(g_samp[i], t_int, n=2)
+                m2[r, i] = 2.0 * np.pi * _integrate_g_tn(g_samp[i], t_int - t0, n=2)
 
         if calcm3:
             for i in range(3):
-                m3[r, i] = 2.0 * np.pi * _integrate_g_tn(g_samp[i], t_int, n=3)
+                m3[r, i] = 2.0 * np.pi * _integrate_g_tn(g_samp[i], t_int - t0, n=3)
 
     return B, m1, m2, m3
 
