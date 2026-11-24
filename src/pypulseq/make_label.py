@@ -1,13 +1,12 @@
 import numbers
 from types import SimpleNamespace
-from typing import Union
 
 import numpy as np
 
 from pypulseq.supported_labels_rf_use import LABEL_FLAGS, get_supported_labels
 
 
-def make_label(label: str, type: str, value: Union[bool, float, int]) -> SimpleNamespace:  # noqa: A002
+def make_label(label: str, type: str, value: bool | float | int) -> SimpleNamespace:  # noqa: A002
     """
     Create an ADC Label.
 

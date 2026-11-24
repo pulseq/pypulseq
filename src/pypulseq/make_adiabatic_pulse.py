@@ -1,6 +1,5 @@
 import math
 from types import SimpleNamespace
-from typing import Tuple, Union
 from warnings import warn
 
 import numpy as np
@@ -20,23 +19,20 @@ def make_adiabatic_pulse(
     beta: float = 800.0,
     delay: float = 0.0,
     duration: float = 10e-3,
-    dwell: Union[float, None] = None,
+    dwell: float | None = None,
     freq_offset: float = 0.0,
-    max_grad: Union[float, None] = None,
-    max_slew: Union[float, None] = None,
+    max_grad: float | None = None,
+    max_slew: float | None = None,
     n_fac: int = 40,
     mu: float = 4.9,
     phase_offset: float = 0.0,
     return_gz: bool = False,
     slice_thickness: float = 0.0,
-    system: Union[Opts, None] = None,
+    system: Opts | None = None,
     use: str = 'inversion',
     freq_ppm: float = 0.0,
     phase_ppm: float = 0.0,
-) -> Union[
-    SimpleNamespace,
-    Tuple[SimpleNamespace, SimpleNamespace, SimpleNamespace],
-]:
+) -> SimpleNamespace | tuple[SimpleNamespace, SimpleNamespace, SimpleNamespace]:
     """
     Make an adiabatic inversion pulse.
 
@@ -486,7 +482,7 @@ def _bloch_siegert_fm(
     dur: float = 2e-3,
     b1p: float = 20.0,
     k: float = 42.0,
-    gamma: Union[float, None] = None,
+    gamma: float | None = None,
 ):
     r"""
     U-shaped FM waveform for adiabatic Bloch-Siegert :math:`B_1^{+}` mapping

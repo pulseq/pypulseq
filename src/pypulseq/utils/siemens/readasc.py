@@ -1,8 +1,7 @@
 import re
-from typing import Tuple
 
 
-def readasc(filename: str) -> Tuple[dict, dict]:
+def readasc(filename: str) -> tuple[dict, dict]:
     """
     Read a Siemens ASC ASCII-formatted text file.
 
@@ -33,7 +32,7 @@ def readasc(filename: str) -> Tuple[dict, dict]:
     asc, extra = {}, {}
 
     # Read asc file and convert it into a dictionary structure
-    with open(filename, 'r', encoding='utf-8') as fp:
+    with open(filename, encoding='utf-8') as fp:
         end_of_asc = False
 
         for next_line in fp:

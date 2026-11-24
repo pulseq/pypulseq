@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from typing import Tuple, Union
 
 import numpy as np
 
@@ -10,8 +9,8 @@ from pypulseq.utils.tracing import trace, trace_enabled
 
 
 def split_gradient(
-    grad: SimpleNamespace, system: Union[Opts, None] = None
-) -> Tuple[SimpleNamespace, SimpleNamespace, SimpleNamespace]:
+    grad: SimpleNamespace, system: Opts | None = None
+) -> tuple[SimpleNamespace, SimpleNamespace, SimpleNamespace]:
     """
     Splits a trapezoidal gradient into slew up, flat top and slew down. Returns the individual gradient parts (slew up,
     flat top and slew down) as extended trapezoid gradient objects. The delays in the individual gradient events are

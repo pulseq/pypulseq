@@ -352,7 +352,7 @@ def safe_plot(pns, dt=None, envelope=True, envelope_points=500):
 
         if pns.shape[0] % n_samples != 0:
             pns = np.concatenate((pns, np.zeros((n_samples - pns.shape[0] % n_samples, pns.shape[1]))))
-            pnsnorm = np.concatenate((pnsnorm, np.zeros((n_samples - pnsnorm.shape[0] % n_samples))))
+            pnsnorm = np.concatenate((pnsnorm, np.zeros(n_samples - pnsnorm.shape[0] % n_samples)))
 
         pns = pns.reshape(pns.shape[0] // n_samples, n_samples, pns.shape[1])
         pns = pns.max(axis=1)

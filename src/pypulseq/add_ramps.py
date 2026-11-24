@@ -1,6 +1,5 @@
 from copy import copy
 from types import SimpleNamespace
-from typing import List, Union
 
 import numpy as np
 
@@ -9,13 +8,13 @@ from pypulseq.opts import Opts
 
 
 def add_ramps(
-    k: Union[list, np.ndarray, tuple],
+    k: list | np.ndarray | tuple,
     max_grad: int = 0,
     max_slew: int = 0,
-    rf: Union[SimpleNamespace, None] = None,
-    system: Union[Opts, None] = None,
+    rf: SimpleNamespace | None = None,
+    system: Opts | None = None,
     oversampling: bool = False,
-) -> List[np.ndarray]:
+) -> list[np.ndarray]:
     """
     Add segments to the trajectory to ramp to and from the given trajectory.
 

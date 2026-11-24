@@ -1,7 +1,7 @@
 import subprocess
 from pathlib import Path
 from sys import platform
-from typing import Any, List, Tuple, Union
+from typing import Any
 
 from pypulseq import Sequence
 
@@ -52,7 +52,7 @@ class ScannerDefinition:
         raise NotImplementedError()
 
 
-def register_scanner(name: str, definition: ScannerDefinition, groups: Union[List[str], None] = None) -> None:
+def register_scanner(name: str, definition: ScannerDefinition, groups: list[str] | None = None) -> None:
     """
     Adds a `ScannerDefinition` to the list of known scanner targets.
 
@@ -83,7 +83,7 @@ def register_scanner(name: str, definition: ScannerDefinition, groups: Union[Lis
                 scanner_targets[g].append(name)
 
 
-def detect_scanner(target: Union[str, None] = None, clear_cache: bool = False) -> Tuple[str, ScannerDefinition]:
+def detect_scanner(target: str | None = None, clear_cache: bool = False) -> tuple[str, ScannerDefinition]:
     """
     Detects whether any known scanner is available for installing pulseq
     sequences.

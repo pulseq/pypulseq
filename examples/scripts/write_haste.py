@@ -62,7 +62,7 @@ def main(
         The HASTE sequence object.
     """
     fov_x, fov_y = (fov, fov) if isinstance(fov, (int, float)) else fov
-    dG = 250e-6
+    rise_time = 250e-6
 
     # Set system limits
     system = pp.Opts(
@@ -115,7 +115,7 @@ def main(
         system=system,
         amplitude=gz.amplitude,
         flat_time=t_ex_wd,
-        rise_time=dG,
+        rise_time=rise_time,
     )
 
     flip_ref = np.deg2rad(rf_flip_deg[0])
@@ -136,7 +136,7 @@ def main(
         system=system,
         amplitude=gs_ex.amplitude,
         flat_time=t_ref_wd,
-        rise_time=dG,
+        rise_time=rise_time,
     )
 
     ags_ex = gs_ex.area / 2
@@ -145,9 +145,9 @@ def main(
         system=system,
         area=ags_ex * (1 + fsp_s),
         duration=t_sp,
-        rise_time=dG,
+        rise_time=rise_time,
     )
-    gs_spex = pp.make_trapezoid(channel='z', system=system, area=ags_ex * fsp_s, duration=t_sp_ex, rise_time=dG)
+    gs_spex = pp.make_trapezoid(channel='z', system=system, area=ags_ex * fsp_s, duration=t_sp_ex, rise_time=rise_time)
 
     delta_kx = 1 / fov_x
     delta_ky = 1 / fov_y
@@ -158,14 +158,14 @@ def main(
         system=system,
         flat_area=k_width,
         flat_time=readout_time,
-        rise_time=dG,
+        rise_time=rise_time,
     )
     adc = pp.make_adc(num_samples=n_x, duration=sampling_time, delay=system.adc_dead_time, system=system)
-    gr_spr = pp.make_trapezoid(channel='x', system=system, area=gr_acq.area * fsp_r, duration=t_sp, rise_time=dG)
+    gr_spr = pp.make_trapezoid(channel='x', system=system, area=gr_acq.area * fsp_r, duration=t_sp, rise_time=rise_time)
 
     agr_spr = gr_spr.area
     agr_preph = gr_acq.area / 2 + agr_spr
-    gr_preph = pp.make_trapezoid(channel='x', system=system, area=agr_preph, duration=t_sp_ex, rise_time=dG)
+    gr_preph = pp.make_trapezoid(channel='x', system=system, area=agr_preph, duration=t_sp_ex, rise_time=rise_time)
 
     n_ex = 1
     pe_order = np.arange(-n_y_pre, n_y + 1).T
@@ -284,14 +284,14 @@ def main(
                     system=system,
                     area=phase_area,
                     duration=t_sp,
-                    rise_time=dG,
+                    rise_time=rise_time,
                 )
                 gp_rew = pp.make_trapezoid(
                     channel='y',
                     system=system,
                     area=-phase_area,
                     duration=t_sp,
-                    rise_time=dG,
+                    rise_time=rise_time,
                 )
 
                 seq.add_block(rf_ref, gs4)

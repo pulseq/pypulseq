@@ -1,6 +1,5 @@
 import numbers
 from types import SimpleNamespace
-from typing import List, Union
 
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -19,7 +18,7 @@ def _get_grad_abs_mag(grad: SimpleNamespace) -> float:
     return np.max(np.abs(grad.waveform))
 
 
-def _rotation_to_matrix(rotation: Union[np.ndarray, list, tuple, float, Rotation]) -> np.ndarray:
+def _rotation_to_matrix(rotation: np.ndarray | list | tuple | float | Rotation) -> np.ndarray:
     """Convert the supported rotation representations to a 3x3 rotation matrix."""
     if isinstance(rotation, Rotation):
         return rotation.as_matrix()
@@ -53,9 +52,9 @@ def _rotation_to_matrix(rotation: Union[np.ndarray, list, tuple, float, Rotation
 
 def rotate_3d(
     *args: SimpleNamespace,
-    rotation: Union[np.ndarray, list, tuple, float, Rotation],
-    system: Union[Opts, None] = None,
-) -> List[SimpleNamespace]:
+    rotation: np.ndarray | list | tuple | float | Rotation,
+    system: Opts | None = None,
+) -> list[SimpleNamespace]:
     """
     Rotates the corresponding gradient(s) by the provided 3D rotation. Non-gradient events are not affected.
 
